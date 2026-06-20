@@ -111,8 +111,7 @@ sudo ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/orderbook-api 2>/dev/null || 
 sudo nginx -t && sudo systemctl reload nginx
 echo "  Nginx config installed."
 echo ""
-echo "  ⚠  Edit $NGINX_CONF and replace YOUR_BACKEND_DOMAIN with your real domain."
-echo "  Then run: sudo certbot --nginx -d YOUR_BACKEND_DOMAIN"
+echo "  Run: sudo certbot --nginx -d orderbook-api.stockmaniacs.net"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
@@ -121,8 +120,8 @@ echo "  Setup complete!"
 echo ""
 echo "  Next steps:"
 echo "  1. Edit $BACKEND_DIR/.env  →  set ALLOWED_ORIGINS"
-echo "  2. Edit $NGINX_CONF        →  set YOUR_BACKEND_DOMAIN"
-echo "  3. sudo certbot --nginx -d YOUR_BACKEND_DOMAIN"
-echo "  4. pm2 logs orderbook-api  →  verify API is running"
-echo "  5. curl http://localhost:8000/health"
+echo "  2. sudo certbot --nginx -d orderbook-api.stockmaniacs.net"
+
+echo "  3. pm2 logs orderbook-api  &&  verify API is running"
+echo "  4. curl https://orderbook-api.stockmaniacs.net/health"
 echo "======================================================"

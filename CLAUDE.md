@@ -98,7 +98,7 @@ orderbook-ai-desk/
 | `/api/v1/technical` | Technical AI scanner |
 | `/health` | Health check (Nginx probe) |
 
-Swagger UI: `https://YOUR_BACKEND_DOMAIN/docs`
+Swagger UI: `https://orderbook-api.stockmaniacs.net/docs`
 
 ---
 
@@ -199,13 +199,13 @@ nano backend/.env
 
 # 4. Edit Nginx config
 sudo nano /etc/nginx/sites-available/orderbook-api
-# Replace YOUR_BACKEND_DOMAIN with your real domain
+# Replace orderbook-api.stockmaniacs.net with your real domain
 
 # 5. SSL
-sudo certbot --nginx -d your-backend-domain.com
+sudo certbot --nginx -d orderbook-api.stockmaniacs.net
 
 # 6. Verify
-curl https://your-backend-domain.com/health
+curl https://orderbook-api.stockmaniacs.net/health
 pm2 status
 ```
 
@@ -247,7 +247,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ### Cloudflare Pages variable (set in dashboard or GitHub Actions vars)
 ```
-NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+NEXT_PUBLIC_API_URL=https://orderbook-api.stockmaniacs.net
 ```
 
 ---
