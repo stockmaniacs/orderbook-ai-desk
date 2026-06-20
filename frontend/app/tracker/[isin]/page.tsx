@@ -569,8 +569,10 @@ export default function TrackerDetailPage() {
             <div className="mt-6 rounded-xl border border-gray-200 bg-white overflow-hidden">
               <div className="bg-gray-50 px-5 py-3 text-sm font-semibold text-gray-700 border-b">Scenario Parameters</div>
               <div className="grid grid-cols-3 divide-x divide-gray-100">
-                {[["Bull", thesis.bull_case], ["Base", thesis.base_case], ["Bear", thesis.bear_case]].map(([label, cas]) => (
-                  <div key={label as string} className="p-5">
+                {(["Bull", "Base", "Bear"] as const).map((label) => {
+                  const cas = label === "Bull" ? thesis.bull_case : label === "Base" ? thesis.base_case : thesis.bear_case;
+                  return (
+                  <div key={label} className="p-5">
                     <div className={`text-sm font-semibold mb-3 ${label === "Bull" ? "text-emerald-600" : label === "Base" ? "text-blue-600" : "text-red-500"}`}>
                       {label} Case
                     </div>
@@ -581,7 +583,8 @@ export default function TrackerDetailPage() {
                       </div>
                     ))}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
