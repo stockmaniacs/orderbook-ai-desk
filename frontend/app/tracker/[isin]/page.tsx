@@ -135,7 +135,7 @@ const SCENARIO_COLORS: Record<string, { bg: string; border: string; label: strin
   BEAR: { bg: "bg-red-50",     border: "border-red-200",     label: "🐻 Bear Case" },
 };
 
-function ScenarioCard({ s }: { s: CompanyDetail["scenarios"][0] }) {
+function ScenarioCard({ s }: { s: NonNullable<CompanyDetail["scenarios"]>[0] }) {
   const cfg = SCENARIO_COLORS[s.scenario_type] || { bg: "bg-gray-50", border: "border-gray-200", label: s.scenario_type };
   return (
     <div className={`rounded-xl border p-4 ${cfg.bg} ${cfg.border}`}>
