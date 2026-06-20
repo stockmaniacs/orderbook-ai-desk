@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "postbuild": "rm -rf .next/cache",
+    "build": "next build && npx @cloudflare/next-on-pages@1",
     "start": "next start",
     "lint": "next lint"
   },
@@ -17,6 +16,7 @@
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
