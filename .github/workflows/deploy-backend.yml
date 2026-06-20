@@ -1,0 +1,47 @@
+name: Deploy backend to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'ecosystem.config.js'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    name: SSH deploy to Oracle VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 161.118.181.181
+          username: ubuntu
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "── Pulling latest code ──"
+            cd /home/ubuntu/projects/orderbook-ai-desk
+            git pull origin main
+
+            echo "── Installing Python dependencies ──"
+            cd backend
+            source venv/bin/activate
+            pip install --quiet -r requirements.txt
+
+            echo "── Running migrations ──"
+            alembic upgrade head
+
+            echo "── Reloading PM2 processes ──"
+            cd ..
+            pm2 reload ecosystem.config.js --update-env
+            pm2 save
+
+            echo "── Health check ──"
+            sleep 3
+            curl -sf http://localhost:8000/health || (echo "Health check failed!" && exit 1)
+
+            echo "── Deploy complete ──"
