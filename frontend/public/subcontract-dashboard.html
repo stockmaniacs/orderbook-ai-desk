@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Subcontract Opportunity Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+
+  /* ─── Layout ── */
+  .topbar { background: #1e293b; color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+  .topbar .badge { background: #334155; border-radius: 6px; font-size: 0.72rem; padding: 3px 10px; color: #94a3b8; }
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid #e2e8f0; background: #fff; padding: 0 24px; }
+  .tab { padding: 12px 18px; font-size: 0.8rem; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+  .tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+  .tab:hover:not(.active) { color: #1e293b; }
+  .panel { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* ─── Cards ── */
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+  .card .val { font-size: 1.6rem; font-weight: 800; color: #1e293b; }
+  .card .lbl { font-size: 0.72rem; color: #94a3b8; margin-top: 4px; }
+  .card.accent { background: #eef2ff; border-color: #c7d2fe; }
+  .card.accent .val { color: #4f46e5; }
+
+  /* ─── Tables ── */
+  .tbl-wrap { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead { background: #f8fafc; }
+  th { padding: 10px 14px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 600; }
+  th.right, td.right { text-align: right; }
+  td { padding: 12px 14px; border-top: 1px solid #f1f5f9; vertical-align: middle; }
+  tr:hover td { background: #f8fafc; cursor: pointer; }
+
+  /* ─── Action badges ── */
+  .badge-action { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; font-weight: 700; border: 1px solid; }
+  .STRONG_BUY_TRIGGER { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+  .BUY_TRIGGER        { background: #f0fdf4; color: #166534; border-color: #86efac; }
+  .MONITOR            { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
+  .WATCH              { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+  .UNLIKELY           { background: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
+
+  /* ─── Theme badges ── */
+  .theme-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.68rem; font-weight: 600; }
+  .t-POWER  { background: #fef9c3; color: #713f12; }
+  .t-RAIL   { background: #dbeafe; color: #1e3a8a; }
+  .t-ROAD   { background: #ffedd5; color: #9a3412; }
+  .t-DEF    { background: #fee2e2; color: #991b1b; }
+  .t-HC     { background: #f3e8ff; color: #6b21a8; }
+  .t-GE     { background: #dcfce7; color: #14532d; }
+  .t-UI     { background: #cffafe; color: #164e63; }
+  .t-DC     { background: #e0e7ff; color: #312e81; }
+  .t-WS     { background: #ccfbf1; color: #134e4a; }
+  .t-PORT   { background: #e0f2fe; color: #0c4a6e; }
+
+  /* ─── Score bars ── */
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-track { flex: 1; background: #f1f5f9; border-radius: 99px; height: 6px; min-width: 60px; }
+  .bar-fill  { height: 6px; border-radius: 99px; }
+  .bar-val   { font-size: 0.72rem; color: #64748b; width: 28px; text-align: right; }
+
+  /* ─── Chart containers ── */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .chart-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; }
+  .chart-card h3 { font-size: 0.82rem; font-weight: 600; margin-bottom: 16px; color: #475569; }
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* ─── Network graph ── */
+  #network-canvas { width: 100%; height: 440px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; cursor: grab; }
+  .legend { display: flex; gap: 20px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #64748b; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* ─── Search & Filters ── */
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+  input[type="text"], select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 0.8rem; color: #1e293b; background: #fff; }
+  input[type="text"]:focus, select:focus { outline: none; border-color: #6366f1; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: #6366f1; color: #fff; }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-ghost { background: #f1f5f9; color: #475569; }
+  .btn-ghost:hover { background: #e2e8f0; }
+
+  /* ─── Tooltip ── */
+  #tooltip { position: fixed; background: #1e293b; color: #fff; border-radius: 8px; padding: 10px 14px; font-size: 0.75rem; pointer-events: none; display: none; z-index: 100; max-width: 240px; line-height: 1.5; }
+
+  /* ─── Opportunity cards (feed) ── */
+  .opp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .opp-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; cursor: pointer; transition: box-shadow 0.15s; }
+  .opp-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-color: #c7d2fe; }
+  .opp-card .prime { font-size: 1rem; font-weight: 700; color: #1e293b; }
+  .opp-card .amount { font-size: 1.4rem; font-weight: 800; color: #4f46e5; }
+  .opp-meta { display: flex; gap: 12px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .opp-stat { font-size: 0.72rem; color: #64748b; }
+  .opp-stat strong { color: #1e293b; }
+  .top-pick { margin-top: 12px; padding: 10px; background: #f8fafc; border-radius: 8px; }
+  .top-pick .pick-name { font-size: 0.8rem; font-weight: 600; color: #1e293b; }
+  .top-pick .pick-meta { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔗 Subcontract Opportunity Intelligence</h1>
+  <span class="badge">AI Supply-Chain Analysis · NSE/BSE</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('feed')">Opportunity Feed</div>
+  <div class="tab" onclick="showTab('detail')">Ranked Beneficiaries</div>
+  <div class="tab" onclick="showTab('network')">Supply-Chain Graph</div>
+  <div class="tab" onclick="showTab('analytics')">Analytics</div>
+</div>
+
+<div id="tooltip"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TAB 1: OPPORTUNITY FEED
+═══════════════════════════════════════════════════════════ -->
+<div id="feed" class="panel active">
+  <div class="cards">
+    <div class="card accent">
+      <div class="val">₹1,28,450 Cr</div>
+      <div class="lbl">Total Order Value (Active)</div>
+    </div>
+    <div class="card">
+      <div class="val">₹62,340 Cr</div>
+      <div class="lbl">Est. Subcontract Pool</div>
+    </div>
+    <div class="card">
+      <div class="val">47</div>
+      <div class="lbl">Active Opportunities</div>
+    </div>
+    <div class="card">
+      <div class="val">312</div>
+      <div class="lbl">Beneficiary Signals</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <input type="text" id="feed-search" placeholder="Search prime contractor…" oninput="renderFeed()" style="width:220px"/>
+    <select id="feed-theme" onchange="renderFeed()">
+      <option value="">All Themes</option>
+      <option>POWER_T&D</option><option>RAILWAYS</option><option>ROADS_HIGHWAYS</option>
+      <option>DEFENCE</option><option>HYDROCARBON</option><option>GREEN_ENERGY</option>
+      <option>URBAN_INFRA</option><option>DATA_CENTRES</option>
+    </select>
+    <select id="feed-action" onchange="renderFeed()">
+      <option value="">All Actions</option>
+      <option value="STRONG_BUY_TRIGGER">Strong Buy</option>
+      <option value="BUY_TRIGGER">Buy</option>
+      <option value="MONITOR">Monitor</option>
+    </select>
+    <button class="btn btn-ghost" onclick="renderFeed()">↺ Refresh</button>
+  </div>
+
+  <div class="opp-grid" id="opp-grid"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TAB 2: RANKED BENEFICIARIES (Detail for selected opp)
+═══════════════════════════════════════════════════════════ -->
+<div id="detail" class="panel">
+  <div class="filters">
+    <select id="detail-opp" onchange="renderDetail()" style="width:340px">
+      <option value="opp1">L&T — ₹22,000 Cr PGCIL Power Grid Order</option>
+      <option value="opp2">KEC International — ₹4,800 Cr Railway Electrification</option>
+      <option value="opp3">NCC Ltd — ₹3,200 Cr Highways Project</option>
+    </select>
+    <select id="detail-filter" onchange="renderDetail()">
+      <option value="">All Actions</option>
+      <option value="STRONG_BUY_TRIGGER">Strong Buy</option>
+      <option value="BUY_TRIGGER">Buy</option>
+      <option value="MONITOR">Monitor</option>
+      <option value="WATCH">Watch</option>
+    </select>
+  </div>
+
+  <div id="detail-header" class="card" style="margin-bottom:16px"></div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th><th>Company</th><th>Relationship</th>
+          <th>Probability</th><th>Rev Impact</th><th>% Rev</th>
+          <th>Overall Score</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="detail-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TAB 3: SUPPLY-CHAIN NETWORK GRAPH
+═══════════════════════════════════════════════════════════ -->
+<div id="network" class="panel">
+  <div class="filters">
+    <select id="graph-company" onchange="renderNetwork()">
+      <option value="lt">L&T (Prime)</option>
+      <option value="polycab">Polycab India</option>
+      <option value="kec">KEC International</option>
+      <option value="bhel">BHEL</option>
+    </select>
+    <select id="graph-hops" onchange="renderNetwork()">
+      <option value="1">1 Hop (Direct)</option>
+      <option value="2" selected>2 Hops</option>
+    </select>
+    <span style="font-size:0.75rem;color:#94a3b8;padding:0 8px">
+      Node size = centrality · Edge width = relationship strength
+    </span>
+  </div>
+
+  <canvas id="network-canvas"></canvas>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> Prime Contractor (Tier 1)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Tier-1 Supplier</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Tier-2 Supplier</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> STRONG BUY signal</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TAB 4: ANALYTICS
+═══════════════════════════════════════════════════════════ -->
+<div id="analytics" class="panel">
+  <div class="charts">
+    <div class="chart-card">
+      <h3>Subcontract Pool by Theme (₹ Cr)</h3>
+      <div class="chart-wrap"><canvas id="theme-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Investment Action Distribution</h3>
+      <div class="chart-wrap"><canvas id="action-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Top 10 Beneficiary Companies by Signal Count</h3>
+      <div class="chart-wrap"><canvas id="company-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Prediction Accuracy (Historical)</h3>
+      <div class="chart-wrap"><canvas id="accuracy-chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Company</th><th>Strong Buy Signals</th><th>Buy Signals</th><th>Avg Rev Impact ₹ Cr</th><th>Top Theme</th><th>Accuracy</th></tr>
+      </thead>
+      <tbody id="analytics-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ─── MOCK DATA ─────────────────────────────────────────────────────────────
+const OPPORTUNITIES = [
+  {
+    id:"opp1", prime:"Larsen & Toubro", isin:"INE018A01030",
+    amount:22000, customer:"Power Grid Corporation", theme:"POWER_T&D",
+    date:"2026-06-10", subcontract:12100, bens:38,
+    topPick:"Polycab India", topAction:"STRONG_BUY_TRIGGER", topScore:84.2,
+  },
+  {
+    id:"opp2", prime:"KEC International", isin:"INE389H01022",
+    amount:4800, customer:"Indian Railways", theme:"RAILWAYS",
+    date:"2026-06-08", subcontract:2400, bens:24,
+    topPick:"Sterlite Technologies", topAction:"BUY_TRIGGER", topScore:71.5,
+  },
+  {
+    id:"opp3", prime:"NCC Ltd", isin:"INE868B01028",
+    amount:3200, customer:"NHAI", theme:"ROADS_HIGHWAYS",
+    date:"2026-06-05", subcontract:1440, bens:17,
+    topPick:"PSP Projects", topAction:"BUY_TRIGGER", topScore:67.3,
+  },
+  {
+    id:"opp4", prime:"Adani Ports", isin:"INE742F01042",
+    amount:6500, customer:"Govt of Maharashtra", theme:"PORTS_WATERWAYS",
+    date:"2026-06-03", subcontract:2730, bens:21,
+    topPick:"Elecon Engineering", topAction:"MONITOR", topScore:51.8,
+  },
+  {
+    id:"opp5", prime:"BHEL", isin:"INE257F01010",
+    amount:9800, customer:"NTPC", theme:"POWER_T&D",
+    date:"2026-05-28", subcontract:5390, bens:45,
+    topPick:"Transformers & Rectifiers", topAction:"STRONG_BUY_TRIGGER", topScore:88.4,
+  },
+  {
+    id:"opp6", prime:"Tata Projects", isin:"INE099Z01020",
+    amount:5100, customer:"ONGC", theme:"HYDROCARBON",
+    date:"2026-05-25", subcontract:2550, bens:29,
+    topPick:"Apar Industries", topAction:"BUY_TRIGGER", topScore:73.1,
+  },
+];
+
+const DETAIL_DATA = {
+  opp1: {
+    prime:"L&T", amount:22000, customer:"Power Grid Corp (PGCIL)",
+    theme:"POWER_T&D", sub:12100, date:"2026-06-10",
+    bens:[
+      {rank:1, name:"Polycab India", isin:"INE235A01022", sector:"Cables", mcap:65000,
+       rel:"CABLE_SUPPLIER_TO", cat:"cables", hops:1, prob:88, impact:1210, impactPct:8.4, conf:91, score:84.2, action:"STRONG_BUY_TRIGGER",
+       rationale:"Polycab is L&T's primary cable supplier for T&D projects, with ~12% revenue dependence confirmed in FY25 annual report."},
+      {rank:2, name:"Transformers & Rectifiers", isin:"INE058I01014", sector:"Transformers", mcap:4200,
+       rel:"TRANSFORMER_SUPPLIER_TO", cat:"transformers", hops:1, prob:82, impact:880, impactPct:14.2, conf:85, score:79.8, action:"STRONG_BUY_TRIGGER",
+       rationale:"T&R supplies power transformers directly to L&T for grid substation projects; 400 kV grid orders are a prime use case."},
+      {rank:3, name:"Techno Electric", isin:"INE285K01026", sector:"EPC", mcap:6800,
+       rel:"EPC_SUBCONTRACTOR_TO", cat:"switchgear", hops:1, prob:75, impact:550, impactPct:6.8, conf:78, score:72.4, action:"BUY_TRIGGER",
+       rationale:"Techno Electric executes T&D substation EPC as a sub-contractor and has disclosed L&T as a major client in FY24."},
+      {rank:4, name:"Sterlite Technologies", isin:"INE089C01029", sector:"Cables", mcap:7500,
+       rel:"CABLE_SUPPLIER_TO", cat:"cables", hops:1, prob:68, impact:420, impactPct:5.1, conf:72, score:65.3, action:"BUY_TRIGGER",
+       rationale:"Sterlite supplies optical fiber and structured cables for smart grid deployments alongside Polycab."},
+      {rank:5, name:"Apar Industries", isin:"INE372A01015", sector:"Cables", mcap:11200,
+       rel:"CABLE_SUPPLIER_TO", cat:"conductors", hops:1, prob:62, impact:330, impactPct:3.2, conf:68, score:60.1, action:"BUY_TRIGGER",
+       rationale:"Apar manufactures ACSR conductors — critical for overhead transmission lines in grid projects."},
+      {rank:6, name:"Genus Power", isin:"INE850D01014", sector:"Electronics", mcap:4500,
+       rel:"ELECTRONICS_SUPPLIER_TO", cat:"instrumentation", hops:1, prob:55, impact:220, impactPct:4.8, conf:60, score:52.7, action:"MONITOR",
+       rationale:"Genus supplies smart meters and instrumentation — relevant for advanced metering infrastructure in grid upgrades."},
+      {rank:7, name:"Skipper Ltd", isin:"INE501I01010", sector:"Steel", mcap:2800,
+       rel:"SUPPLIES_TO", cat:"structural_steel", hops:1, prob:48, impact:180, impactPct:5.6, conf:55, score:46.2, action:"MONITOR",
+       rationale:"Skipper manufactures steel towers and poles used in T&D infrastructure."},
+      {rank:8, name:"KEI Industries", isin:"INE878D01033", sector:"Cables", mcap:18500,
+       rel:"CABLE_SUPPLIER_TO", cat:"cables", hops:2, prob:42, impact:140, impactPct:0.8, conf:48, score:39.1, action:"WATCH",
+       rationale:"Tier-2 cable supplier; indirect benefit through project execution phase."},
+    ],
+  },
+  opp2: {
+    prime:"KEC International", amount:4800, customer:"Indian Railways",
+    theme:"RAILWAYS", sub:2400, date:"2026-06-08",
+    bens:[
+      {rank:1, name:"Sterlite Technologies", isin:"INE089C01029", sector:"Cables", mcap:7500,
+       rel:"CABLE_SUPPLIER_TO", cat:"cables", hops:1, prob:76, impact:240, impactPct:2.9, conf:80, score:71.5, action:"BUY_TRIGGER",
+       rationale:"KEC uses Sterlite for OFC cables in railway electrification and signalling projects."},
+      {rank:2, name:"HBL Power Systems", isin:"INE292B01021", sector:"Electronics", mcap:3200,
+       rel:"ELECTRONICS_SUPPLIER_TO", cat:"signalling", hops:1, prob:68, impact:190, impactPct:8.1, conf:72, score:64.8, action:"BUY_TRIGGER",
+       rationale:"HBL supplies battery systems for railway signalling and has confirmed KEC as a contractor."},
+      {rank:3, name:"CG Power", isin:"INE067A01029", sector:"Transformers", mcap:45000,
+       rel:"TRANSFORMER_SUPPLIER_TO", cat:"transformers", hops:1, prob:58, impact:120, impactPct:0.4, conf:65, score:54.2, action:"MONITOR",
+       rationale:"CG Power supplies traction transformers; low revenue materiality given large base."},
+    ],
+  },
+  opp3: {
+    prime:"NCC Ltd", amount:3200, customer:"NHAI",
+    theme:"ROADS_HIGHWAYS", sub:1440, date:"2026-06-05",
+    bens:[
+      {rank:1, name:"PSP Projects", isin:"INE687I01024", sector:"Construction", mcap:3800,
+       rel:"CIVIL_CONTRACTOR_TO", cat:"civil_construction", hops:1, prob:72, impact:290, impactPct:9.2, conf:76, score:67.3, action:"BUY_TRIGGER",
+       rationale:"PSP Projects regularly takes civil sub-contracts from NCC for highway projects."},
+      {rank:2, name:"PNC Infratech", isin:"INE195J01010", sector:"Construction", mcap:6200,
+       rel:"EPC_SUBCONTRACTOR_TO", cat:"civil_construction", hops:1, prob:60, impact:180, impactPct:2.8, conf:64, score:56.1, action:"MONITOR",
+       rationale:"PNC Infratech bids for sub-contracts on NH projects alongside NCC."},
+    ],
+  },
+};
+
+const THEME_COLOR_MAP = {
+  "POWER_T&D":"t-POWER","RAILWAYS":"t-RAIL","ROADS_HIGHWAYS":"t-ROAD","DEFENCE":"t-DEF",
+  "HYDROCARBON":"t-HC","GREEN_ENERGY":"t-GE","URBAN_INFRA":"t-UI","DATA_CENTRES":"t-DC",
+  "WATER_SANITATION":"t-WS","PORTS_WATERWAYS":"t-PORT",
+};
+
+// ─── NETWORK GRAPH DATA ───────────────────────────────────────────────────────
+const GRAPH_DATA = {
+  lt: {
+    nodes:[
+      {id:"lt",    label:"L&T",                   tier:1, x:400, y:220, r:36, centrality:0.95},
+      {id:"pol",   label:"Polycab India",          tier:2, x:160, y:100, r:26, centrality:0.82, action:"STRONG_BUY_TRIGGER"},
+      {id:"tnr",   label:"T&R India",              tier:2, x:640, y:100, r:22, centrality:0.71, action:"STRONG_BUY_TRIGGER"},
+      {id:"tech",  label:"Techno Electric",        tier:2, x:180, y:340, r:19, centrality:0.60, action:"BUY_TRIGGER"},
+      {id:"apar",  label:"Apar Industries",        tier:2, x:620, y:340, r:19, centrality:0.58, action:"BUY_TRIGGER"},
+      {id:"kec",   label:"KEC Intl",               tier:1, x:400, y:400, r:22, centrality:0.75},
+      {id:"skpr",  label:"Skipper Ltd",            tier:2, x:290, y:160, r:14, centrality:0.44, action:"MONITOR"},
+      {id:"genp",  label:"Genus Power",            tier:2, x:510, y:160, r:14, centrality:0.40, action:"MONITOR"},
+      {id:"strl",  label:"Sterlite Tech",          tier:2, x:400, y:60,  r:17, centrality:0.55, action:"BUY_TRIGGER"},
+    ],
+    edges:[
+      {from:"pol",  to:"lt",  strength:0.88, cat:"cables"},
+      {from:"tnr",  to:"lt",  strength:0.82, cat:"transformers"},
+      {from:"tech", to:"lt",  strength:0.75, cat:"switchgear"},
+      {from:"apar", to:"lt",  strength:0.62, cat:"conductors"},
+      {from:"strl", to:"lt",  strength:0.68, cat:"cables"},
+      {from:"skpr", to:"lt",  strength:0.48, cat:"towers"},
+      {from:"genp", to:"lt",  strength:0.45, cat:"instruments"},
+      {from:"kec",  to:"lt",  strength:0.55, cat:"subcontract"},
+      {from:"pol",  to:"kec", strength:0.40, cat:"cables"},
+      {from:"strl", to:"kec", strength:0.45, cat:"cables"},
+    ],
+  },
+};
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById(name).classList.add('active');
+  if (name === 'network') renderNetwork();
+  if (name === 'analytics') renderAnalytics();
+  if (name === 'detail') renderDetail();
+}
+
+// ─── FEED ─────────────────────────────────────────────────────────────────────
+function renderFeed() {
+  const search = (document.getElementById('feed-search').value || '').toLowerCase();
+  const theme  = document.getElementById('feed-theme').value;
+  const action = document.getElementById('feed-action').value;
+
+  let opps = OPPORTUNITIES.filter(o => {
+    if (search && !o.prime.toLowerCase().includes(search) && !o.customer.toLowerCase().includes(search)) return false;
+    if (theme && o.theme !== theme) return false;
+    if (action && o.topAction !== action) return false;
+    return true;
+  });
+
+  const grid = document.getElementById('opp-grid');
+  grid.innerHTML = opps.map(o => `
+    <div class="opp-card" onclick="selectOpportunity('${o.id}')">
+      <div class="prime">${o.prime}</div>
+      <div class="amount">₹${o.amount.toLocaleString('en-IN')} Cr</div>
+      <div class="opp-meta">
+        <span class="opp-stat">Customer: <strong>${o.customer}</strong></span>
+        <span class="theme-badge ${THEME_COLOR_MAP[o.theme]||''}">${o.theme}</span>
+      </div>
+      <div class="opp-meta">
+        <span class="opp-stat">Sub-pool: <strong>₹${o.subcontract.toLocaleString('en-IN')} Cr</strong></span>
+        <span class="opp-stat">Beneficiaries: <strong>${o.bens}</strong></span>
+        <span class="opp-stat">${o.date}</span>
+      </div>
+      ${o.topPick ? `
+      <div class="top-pick">
+        <div class="pick-name">🏆 ${o.topPick}</div>
+        <div class="pick-meta">
+          <span class="badge-action ${o.topAction}">${o.topAction.replace('_TRIGGER','').replace('_',' ')}</span>
+          &nbsp; Score: ${o.topScore.toFixed(1)}
+        </div>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function selectOpportunity(id) {
+  document.querySelectorAll('.tab')[1].click();
+  setTimeout(() => {
+    document.getElementById('detail-opp').value = id;
+    renderDetail();
+  }, 50);
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function renderDetail() {
+  const oppId  = document.getElementById('detail-opp').value;
+  const filter = document.getElementById('detail-filter').value;
+  const data   = DETAIL_DATA[oppId];
+  if (!data) return;
+
+  document.getElementById('detail-header').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:1.1rem;font-weight:800">${data.prime} — ₹${data.amount.toLocaleString('en-IN')} Cr</div>
+        <div style="font-size:0.8rem;color:#64748b;margin-top:4px">Customer: ${data.customer} · ${data.date}</div>
+      </div>
+      <div style="display:flex;gap:16px">
+        <div style="text-align:center"><div style="font-size:1.3rem;font-weight:800;color:#4f46e5">₹${data.sub.toLocaleString('en-IN')} Cr</div><div style="font-size:0.7rem;color:#94a3b8">Subcontract Pool</div></div>
+        <div style="text-align:center"><div style="font-size:1.3rem;font-weight:800">${data.bens.length}</div><div style="font-size:0.7rem;color:#94a3b8">Beneficiaries</div></div>
+        <div><span class="theme-badge ${THEME_COLOR_MAP[data.theme]||''}" style="font-size:0.8rem;padding:4px 12px">${data.theme}</span></div>
+      </div>
+    </div>
+  `;
+
+  const bens = filter ? data.bens.filter(b => b.action === filter) : data.bens;
+
+  document.getElementById('detail-table').innerHTML = bens.map(b => `
+    <tr>
+      <td><span style="font-size:1.1rem;font-weight:800;color:#94a3b8">#${b.rank}</span></td>
+      <td>
+        <div style="font-weight:600">${b.name}</div>
+        <div style="font-size:0.7rem;color:#94a3b8">${b.isin} · ${b.sector} · ${b.cat}${b.hops>1?' · Tier '+b.hops:''}</div>
+        ${b.rationale ? `<div style="font-size:0.72rem;color:#64748b;margin-top:4px;max-width:320px">${b.rationale}</div>` : ''}
+      </td>
+      <td><span style="font-size:0.72rem;background:#f1f5f9;padding:2px 8px;border-radius:6px">${b.rel.replace(/_/g,' ')}</span></td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" style="width:${b.prob}%;background:${b.prob>=75?'#10b981':b.prob>=55?'#f59e0b':'#94a3b8'}"></div></div>
+          <div class="bar-val">${b.prob}</div>
+        </div>
+      </td>
+      <td class="right"><strong>₹${b.impact} Cr</strong></td>
+      <td class="right" style="color:${b.impactPct>=5?'#059669':'#1e293b'}">${b.impactPct.toFixed(1)}%</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" style="width:${b.score}%;background:#6366f1"></div></div>
+          <div class="bar-val">${b.score.toFixed(0)}</div>
+        </div>
+      </td>
+      <td><span class="badge-action ${b.action}">${b.action.replace('_TRIGGER','').replace('_',' ')}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ─── NETWORK GRAPH (Canvas-based force layout) ────────────────────────────────
+let nodes = [], edges = [], dragging = null, offsetX = 0, offsetY = 0;
+let hovered = null;
+
+function renderNetwork() {
+  const co = document.getElementById('graph-company').value;
+  const gd = GRAPH_DATA[co] || GRAPH_DATA.lt;
+  nodes = JSON.parse(JSON.stringify(gd.nodes));
+  edges = JSON.parse(JSON.stringify(gd.edges));
+
+  const canvas = document.getElementById('network-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = canvas.offsetWidth  * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+
+  // Scale node positions to canvas
+  nodes.forEach(n => { n.x = n.x / 800 * W; n.y = n.y / 440 * H; });
+
+  let animId;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw edges
+    edges.forEach(e => {
+      const s = nodes.find(n => n.id === e.from);
+      const t = nodes.find(n => n.id === e.to);
+      if (!s || !t) return;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.strokeStyle = `rgba(99,102,241,${e.strength * 0.6})`;
+      ctx.lineWidth = Math.max(1, e.strength * 5);
+      ctx.stroke();
+
+      // Edge label
+      const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.cat, mx, my - 4);
+    });
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const isHovered = hovered === n.id;
+      const r = isHovered ? n.r * 1.15 : n.r;
+
+      // Shadow
+      ctx.shadowBlur = isHovered ? 16 : 6;
+      ctx.shadowColor = 'rgba(99,102,241,0.3)';
+
+      // Fill
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      let fill;
+      if (n.tier === 1) fill = '#6366f1';
+      else if (n.action === 'STRONG_BUY_TRIGGER') fill = '#ef4444';
+      else if (n.action === 'BUY_TRIGGER') fill = '#10b981';
+      else fill = '#f59e0b';
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.fillStyle = '#1e293b';
+      ctx.font = `${n.tier===1?'bold ':''} ${Math.max(10, n.r * 0.48)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      const label = n.label.length > 12 ? n.label.substring(0, 11) + '…' : n.label;
+      ctx.fillText(label, n.x, n.y);
+    });
+  }
+
+  draw();
+  cancelAnimationFrame(animId);
+
+  // Mouse events for dragging + hover tooltip
+  const tooltip = document.getElementById('tooltip');
+
+  function getNode(x, y) {
+    return nodes.find(n => Math.hypot(x - n.x, y - n.y) <= n.r);
+  }
+
+  canvas.onmousedown = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left), my = (e.clientY - rect.top);
+    const n = getNode(mx, my);
+    if (n) { dragging = n; offsetX = mx - n.x; offsetY = my - n.y; canvas.style.cursor = 'grabbing'; }
+  };
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left), my = (e.clientY - rect.top);
+    if (dragging) { dragging.x = mx - offsetX; dragging.y = my - offsetY; draw(); return; }
+    const n = getNode(mx, my);
+    if (n) {
+      hovered = n.id; canvas.style.cursor = 'pointer';
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 10) + 'px';
+      const suppliers = edges.filter(ed => ed.to === n.id);
+      const customers = edges.filter(ed => ed.from === n.id);
+      tooltip.innerHTML = `<strong>${n.label}</strong><br/>
+        Tier: ${n.tier === 1 ? 'Prime' : n.tier}<br/>
+        Centrality: ${(n.centrality * 100).toFixed(0)}th pct<br/>
+        Supplies to: ${customers.length} companies<br/>
+        Supplies from: ${suppliers.length} companies
+        ${n.action ? `<br/><span class="badge-action ${n.action}" style="display:inline-block;margin-top:4px;font-size:0.65rem">${n.action.replace('_TRIGGER','')}</span>` : ''}`;
+    } else {
+      hovered = null; canvas.style.cursor = 'grab';
+      tooltip.style.display = 'none';
+      draw();
+    }
+  };
+  canvas.onmouseup = () => { dragging = null; canvas.style.cursor = 'grab'; };
+  canvas.onmouseleave = () => { dragging = null; tooltip.style.display = 'none'; };
+}
+
+// ─── ANALYTICS CHARTS ─────────────────────────────────────────────────────────
+let charts = {};
+function renderAnalytics() {
+  const themes   = ['POWER_T&D','RAILWAYS','HYDROCARBON','GREEN_ENERGY','DEFENCE','ROADS_HIGHWAYS','URBAN_INFRA','DATA_CENTRES'];
+  const subPools = [27490,11200,12750,8400,6800,5200,4320,3800];
+  const actions  = ['Strong Buy','Buy','Monitor','Watch','Unlikely'];
+  const actCnts  = [28, 64, 91, 73, 56];
+  const topCos   = ['Polycab India','T&R India','Apar Industries','Sterlite Tech','KEC Intl','PSP Projects','HBL Power','Genus Power','Skipper Ltd','KEI Inds'];
+  const signals  = [14, 11, 9, 8, 7, 6, 6, 5, 5, 4];
+  const quarters = ['Q3FY24','Q4FY24','Q1FY25','Q2FY25','Q3FY25','Q4FY25'];
+  const accuracy = [0.61,0.65,0.68,0.72,0.74,0.77];
+
+  const mkChart = (id, type, data, opts={}) => {
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id).getContext('2d'), {type, data, options:{...opts, responsive:true, maintainAspectRatio:false}});
+  };
+
+  mkChart('theme-chart','bar',{
+    labels:themes,
+    datasets:[{label:'Subcontract Pool (₹ Cr)',data:subPools,
+      backgroundColor:['#fbbf24','#60a5fa','#a78bfa','#34d399','#f87171','#fb923c','#22d3ee','#818cf8'],
+      borderRadius:6}],
+  },{plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f1f5f9'}}}});
+
+  mkChart('action-chart','doughnut',{
+    labels:actions,
+    datasets:[{data:actCnts,backgroundColor:['#10b981','#34d399','#60a5fa','#fbbf24','#e2e8f0'],borderWidth:0}],
+  },{plugins:{legend:{position:'right'}}});
+
+  mkChart('company-chart','bar',{
+    labels:topCos,
+    datasets:[{label:'Signal Count',data:signals,backgroundColor:'#6366f1',borderRadius:4}],
+  },{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f1f5f9'}}}});
+
+  mkChart('accuracy-chart','line',{
+    labels:quarters,
+    datasets:[{
+      label:'Prediction Accuracy',data:accuracy,fill:true,tension:0.4,
+      borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',pointBackgroundColor:'#10b981',
+    }],
+  },{plugins:{legend:{display:false}},scales:{
+    y:{min:0.4,max:1.0,ticks:{format:{style:'percent'}},grid:{color:'#f1f5f9'}},
+    x:{grid:{display:false}},
+  }});
+
+  // Analytics table
+  const analyticsRows = [
+    {name:'Polycab India',     sb:14, buy:8,  avgImpact:680, theme:'POWER_T&D',  acc:'77%'},
+    {name:'T&R India',        sb:11, buy:6,  avgImpact:510, theme:'POWER_T&D',  acc:'71%'},
+    {name:'Apar Industries',   sb:9,  buy:7,  avgImpact:320, theme:'HYDROCARBON',acc:'68%'},
+    {name:'Sterlite Tech',    sb:8,  buy:9,  avgImpact:280, theme:'RAILWAYS',   acc:'64%'},
+    {name:'KEC International', sb:7,  buy:5,  avgImpact:210, theme:'POWER_T&D',  acc:'72%'},
+    {name:'PSP Projects',     sb:6,  buy:4,  avgImpact:195, theme:'ROADS_HIGHWAYS',acc:'60%'},
+    {name:'HBL Power Systems', sb:6,  buy:3,  avgImpact:185, theme:'RAILWAYS',   acc:'66%'},
+  ];
+
+  document.getElementById('analytics-table').innerHTML = analyticsRows.map(r => `
+    <tr>
+      <td style="font-weight:600">${r.name}</td>
+      <td><span style="color:#065f46;font-weight:700">${r.sb}</span></td>
+      <td><span style="color:#166534;font-weight:700">${r.buy}</span></td>
+      <td class="right">₹${r.avgImpact} Cr</td>
+      <td><span class="theme-badge ${THEME_COLOR_MAP[r.theme]||''}">${r.theme}</span></td>
+      <td><span style="color:${parseInt(r.acc)>=70?'#059669':'#d97706'};font-weight:600">${r.acc}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderFeed();
+renderDetail();
+window.addEventListener('resize', () => {
+  if (document.getElementById('network').classList.contains('active')) renderNetwork();
+});
+</script>
+</body>
+</html>

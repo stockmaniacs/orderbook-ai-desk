@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Master Tracker Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; font-size: 13px; }
+
+    /* Layout */
+    .header { background: #0f172a; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .header-right { display: flex; gap: 8px; }
+    .badge-count { background: #ef4444; color: white; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+
+    .tabs { display: flex; gap: 0; background: white; border-bottom: 1px solid #e2e8f0; padding: 0 24px; }
+    .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; color: #64748b; transition: all 0.15s; white-space: nowrap; }
+    .tab:hover { color: #1e293b; }
+    .tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+    /* Stat cards */
+    .stat-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 18px; }
+    .stat-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; padding: 12px 14px; cursor: pointer; transition: border-color 0.15s; }
+    .stat-card:hover { border-color: #6366f1; }
+    .stat-card.active { border-color: #6366f1; background: #f5f3ff; }
+    .stat-value { font-size: 22px; font-weight: 800; }
+    .stat-label { font-size: 10px; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .green-val { color: #10b981; }
+    .yellow-val { color: #f59e0b; }
+    .red-val { color: #ef4444; }
+    .alert-val { color: #ef4444; }
+
+    /* Filters */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .filter-bar input, .filter-bar select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 12px; background: white; outline: none; }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: #6366f1; }
+    .btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; border: none; cursor: pointer; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-secondary { background: #f1f5f9; color: #374151; }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    /* Table */
+    .table-wrap { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f8fafc; }
+    th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; white-space: nowrap; user-select: none; }
+    th:hover { color: #1e293b; }
+    th.sorted { color: #6366f1; }
+    th .sort-arrow { display: inline-block; margin-left: 4px; }
+    td { padding: 9px 12px; border-top: 1px solid #f1f5f9; vertical-align: middle; }
+    tr { cursor: pointer; transition: background 0.1s; }
+    tr:hover { background: #f8fafc; }
+    tr.danger-row { background: #fff5f5; }
+    tr.danger-row:hover { background: #fee2e2; }
+
+    /* Signals */
+    .sig { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+    .sig-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .sig-GREEN { background: #ecfdf5; color: #065f46; }
+    .sig-GREEN .sig-dot { background: #10b981; }
+    .sig-YELLOW { background: #fffbeb; color: #78350f; }
+    .sig-YELLOW .sig-dot { background: #f59e0b; }
+    .sig-RED { background: #fef2f2; color: #7f1d1d; }
+    .sig-RED .sig-dot { background: #ef4444; }
+    .sig-NA { background: #f1f5f9; color: #64748b; }
+    .sig-NA .sig-dot { background: #cbd5e1; }
+
+    .verdict { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .v-STRONG_BEAT { background: #d1fae5; color: #065f46; }
+    .v-BEAT        { background: #dcfce7; color: #166534; }
+    .v-IN_LINE     { background: #dbeafe; color: #1e40af; }
+    .v-MISS        { background: #ffedd5; color: #92400e; }
+    .v-STRONG_MISS { background: #fee2e2; color: #7f1d1d; }
+    .v-NA          { background: #f1f5f9; color: #6b7280; }
+
+    .trend-up { color: #10b981; font-size: 16px; }
+    .trend-dn { color: #ef4444; font-size: 16px; }
+    .trend-sw { color: #f59e0b; font-size: 16px; }
+
+    .rating-badge { padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .r-STRONG_BUY  { background: #d1fae5; color: #065f46; }
+    .r-BUY         { background: #dcfce7; color: #166534; }
+    .r-HOLD        { background: #fffbeb; color: #92400e; }
+    .r-SELL        { background: #fee2e2; color: #7f1d1d; }
+    .r-STRONG_SELL { background: #fca5a5; color: #7f1d1d; }
+    .r-NEUTRAL     { background: #f1f5f9; color: #6b7280; }
+
+    .rr-bar { width: 48px; height: 6px; background: #e2e8f0; border-radius: 3px; display: inline-block; position: relative; vertical-align: middle; margin-right: 4px; }
+    .rr-fill { height: 100%; border-radius: 3px; }
+
+    .alert-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; font-size: 10px; font-weight: 700; }
+
+    /* Heatmap tab */
+    .heatmap-grid { overflow-x: auto; }
+    .heatmap-table { border-collapse: collapse; min-width: 700px; }
+    .heatmap-table th { padding: 6px 10px; font-size: 10px; font-weight: 600; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; }
+    .heatmap-table td { width: 42px; height: 32px; border: 1px solid #e2e8f0; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; }
+    .hm-GREEN  { background: #d1fae5; color: #065f46; }
+    .hm-YELLOW { background: #fef3c7; color: #92400e; }
+    .hm-RED    { background: #fee2e2; color: #7f1d1d; }
+    .hm-NA     { background: #f8fafc; color: #cbd5e1; }
+    .hm-company { font-weight: 600; font-size: 11px; color: #1e293b; white-space: nowrap; padding: 4px 10px; background: white; text-align: left; min-width: 160px; }
+
+    /* Detail panel */
+    .detail-panel { position: fixed; right: 0; top: 0; width: 440px; height: 100vh; background: white; border-left: 1px solid #e2e8f0; overflow-y: auto; z-index: 100; transform: translateX(100%); transition: transform 0.25s ease; box-shadow: -4px 0 20px rgba(0,0,0,0.08); }
+    .detail-panel.open { transform: translateX(0); }
+    .detail-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-start; background: #0f172a; color: white; }
+    .detail-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
+    .detail-close:hover { color: white; }
+    .detail-section { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+    .detail-section h4 { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .scenario-card { border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+    .sc-bull { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .sc-base { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .sc-bear { background: #fff1f2; border: 1px solid #fecdd3; }
+    .sc-title { font-weight: 700; font-size: 12px; margin-bottom: 6px; }
+    .sc-row { display: flex; justify-content: space-between; font-size: 11px; color: #374151; padding: 2px 0; }
+    .q-metric-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .q-sig { padding: 2px 5px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+    .q-sig-GREEN  { background: #d1fae5; color: #065f46; }
+    .q-sig-YELLOW { background: #fef3c7; color: #92400e; }
+    .q-sig-RED    { background: #fee2e2; color: #7f1d1d; }
+    .q-sig-NA     { background: #f1f5f9; color: #9ca3af; }
+    .q-row { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+
+    /* Alert feed */
+    .alert-item { padding: 10px 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 10px; }
+    .alert-sev { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; flex-shrink: 0; height: fit-content; margin-top: 2px; }
+    .sev-HIGH   { background: #fee2e2; color: #7f1d1d; }
+    .sev-MEDIUM { background: #ffedd5; color: #92400e; }
+    .sev-LOW    { background: #dbeafe; color: #1e40af; }
+    .alert-body .at { font-size: 12px; font-weight: 600; color: #1e293b; }
+    .alert-body .ad { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .alert-body .am { font-size: 10px; color: #94a3b8; margin-top: 3px; }
+
+    /* Charts tab */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px 18px; }
+    .chart-card h3 { font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
+
+    /* Overlay */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 99; display: none; }
+    .overlay.show { display: block; }
+
+    .no-data { text-align: center; padding: 40px; color: #94a3b8; font-size: 13px; }
+
+    .upside-pos { color: #10b981; font-weight: 600; }
+    .upside-neg { color: #ef4444; font-weight: 600; }
+    .cagr-val { color: #6366f1; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>📊 Master Tracker</h1>
+    <div class="sub" id="header-sub">Loading…</div>
+  </div>
+  <div class="header-right">
+    <span id="alert-badge" style="display:none" class="badge-count">0 alerts</span>
+    <button class="btn btn-primary" onclick="loadDashboard()">↺ Refresh</button>
+    <a href="/tracker" style="color:#94a3b8;font-size:12px;text-decoration:none;line-height:1;padding:6px 10px;border:1px solid #334155;border-radius:8px;" target="_parent">Open App →</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('portfolio')">Portfolio Table</div>
+  <div class="tab" onclick="switchTab('heatmap')">Quarterly Heatmap</div>
+  <div class="tab" onclick="switchTab('alerts')">Alert Feed</div>
+  <div class="tab" onclick="switchTab('charts')">Analytics</div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div>
+      <div id="dp-name" style="font-size:15px;font-weight:700;"></div>
+      <div id="dp-sub" style="font-size:11px;color:#94a3b8;margin-top:2px;"></div>
+    </div>
+    <button class="detail-close" onclick="closePanel()">✕</button>
+  </div>
+  <div id="dp-content"></div>
+</div>
+
+<div class="container">
+
+  <!-- Portfolio Table Tab -->
+  <div id="tab-portfolio">
+    <div class="stat-row">
+      <div class="stat-card" onclick="filterSignal('')" id="stat-all"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Tracked</div></div>
+      <div class="stat-card" onclick="filterSignal('GREEN')" id="stat-green"><div class="stat-value green-val" id="stat-green-count">—</div><div class="stat-label">🟢 Green</div></div>
+      <div class="stat-card" onclick="filterSignal('YELLOW')" id="stat-yellow"><div class="stat-value yellow-val" id="stat-yellow-count">—</div><div class="stat-label">🟡 Yellow</div></div>
+      <div class="stat-card" onclick="filterSignal('RED')" id="stat-red"><div class="stat-value red-val" id="stat-red-count">—</div><div class="stat-label">🔴 Red</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-avg-cagr">—</div><div class="stat-label">Avg CAGR 3Y</div></div>
+      <div class="stat-card"><div class="stat-value alert-val" id="stat-alerts">—</div><div class="stat-label">Unread Alerts</div></div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="Search company…" oninput="applyFilters()" style="width:200px;" />
+      <select id="signal-filter" onchange="applyFilters()">
+        <option value="">All Signals</option>
+        <option value="GREEN">🟢 Green</option>
+        <option value="YELLOW">🟡 Yellow</option>
+        <option value="RED">🔴 Red</option>
+      </select>
+      <select id="mcap-filter" onchange="applyFilters()">
+        <option value="">All Mkt Caps</option>
+        <option value="LARGE">Large Cap</option>
+        <option value="MID">Mid Cap</option>
+        <option value="SMALL">Small Cap</option>
+        <option value="MICRO">Micro Cap</option>
+      </select>
+      <select id="sector-filter" onchange="applyFilters()">
+        <option value="">All Sectors</option>
+      </select>
+      <button class="btn btn-secondary" onclick="clearFilters()">✕ Clear</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('company_name')">Company <span class="sort-arrow" id="sort-company_name"></span></th>
+            <th onclick="sortBy('sector')">Sector <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('market_cap_cr')" style="text-align:right;">MCap Cr <span class="sort-arrow" id="sort-market_cap_cr"></span></th>
+            <th onclick="sortBy('cmp')" style="text-align:right;">CMP <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('upside_pct')" style="text-align:right;">Upside <span class="sort-arrow" id="sort-upside_pct"></span></th>
+            <th onclick="sortBy('expected_cagr_3y')" style="text-align:right;">CAGR 3Y <span class="sort-arrow" id="sort-expected_cagr_3y"></span></th>
+            <th>Signal</th>
+            <th>Rating</th>
+            <th onclick="sortBy('risk_reward_score')">R/R <span class="sort-arrow" id="sort-risk_reward_score"></span></th>
+            <th>Technical</th>
+            <th>Last Result</th>
+            <th>Alerts</th>
+          </tr>
+        </thead>
+        <tbody id="portfolio-tbody"></tbody>
+      </table>
+      <div id="portfolio-empty" class="no-data" style="display:none;">No stocks match the current filters.</div>
+    </div>
+  </div>
+
+  <!-- Heatmap Tab -->
+  <div id="tab-heatmap" style="display:none;">
+    <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;overflow:auto;">
+      <div style="font-size:13px;font-weight:600;color:#1e293b;margin-bottom:12px;">Quarterly Beat/Miss Heatmap — by Company × Quarter</div>
+      <div class="heatmap-grid">
+        <table class="heatmap-table" id="heatmap-table">
+          <thead id="heatmap-head"></thead>
+          <tbody id="heatmap-body"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:16px;height:16px;background:#d1fae5;border-radius:3px;"></div>Beat</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:16px;height:16px;background:#fef3c7;border-radius:3px;"></div>In-line</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:16px;height:16px;background:#fee2e2;border-radius:3px;"></div>Miss</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;"><div style="width:16px;height:16px;background:#f8fafc;border-radius:3px;border:1px solid #e2e8f0;"></div>No data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Tab -->
+  <div id="tab-alerts" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
+      <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;">All Alerts</div>
+        <div id="alerts-list"></div>
+      </div>
+      <div>
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:10px;">Alert Types</div>
+          <canvas id="alert-type-chart" height="180"></canvas>
+        </div>
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;">
+          <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;margin-bottom:10px;">Severity Mix</div>
+          <canvas id="severity-chart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Tab -->
+  <div id="tab-charts" style="display:none;">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Portfolio Signal Distribution</h3>
+        <canvas id="signal-chart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Top Companies by Expected CAGR</h3>
+        <canvas id="cagr-chart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Sector Breakdown (by stock count)</h3>
+        <canvas id="sector-chart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Historical Beat / Miss Rate (%)</h3>
+        <canvas id="beat-chart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Mock data ──────────────────────────────────────────────────────────────────
+const STOCKS = [
+  { isin:"INE018A01030", symbol_nse:"LTIM",     company_name:"LTIMindtree",           sector:"IT",             market_cap_cr:128000, market_cap_cat:"LARGE", cmp:5420,  target_price_12m:6800,  upside_pct:25.5,  expected_cagr_3y:22, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:7.8, conviction_score:78, technical_trend:"UPTREND",    technical_score:72, consecutive_red:0, last_verdict:"BEAT",        last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE040A01034", symbol_nse:"HDFCBANK",  company_name:"HDFC Bank",             sector:"Banking",        market_cap_cr:1180000,market_cap_cat:"LARGE", cmp:1720,  target_price_12m:2100,  upside_pct:22.1,  expected_cagr_3y:18, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:7.2, conviction_score:82, technical_trend:"SIDEWAYS",   technical_score:54, consecutive_red:0, last_verdict:"IN_LINE",     last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE066A01021", symbol_nse:"ABB",       company_name:"ABB India",             sector:"Capital Goods",  market_cap_cr:82000,  market_cap_cat:"LARGE", cmp:6850,  target_price_12m:8200,  upside_pct:19.7,  expected_cagr_3y:25, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:8.1, conviction_score:85, technical_trend:"UPTREND",    technical_score:78, consecutive_red:0, last_verdict:"STRONG_BEAT", last_quarter:"Q4 FY25", unread_alert_count:1 },
+  { isin:"INE148A01014", symbol_nse:"POLYCAB",   company_name:"Polycab India",         sector:"Capital Goods",  market_cap_cr:68000,  market_cap_cat:"LARGE", cmp:4560,  target_price_12m:5800,  upside_pct:27.2,  expected_cagr_3y:20, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:7.9, conviction_score:80, technical_trend:"UPTREND",    technical_score:74, consecutive_red:0, last_verdict:"BEAT",        last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE092T01019", symbol_nse:"GPIL",      company_name:"Godawari Power & Ispat",sector:"Metals",         market_cap_cr:9800,   market_cap_cat:"MID",   cmp:542,   target_price_12m:680,   upside_pct:25.5,  expected_cagr_3y:28, rating:"BUY",        overall_signal:"YELLOW", risk_reward_score:6.5, conviction_score:62, technical_trend:"SIDEWAYS",   technical_score:48, consecutive_red:1, last_verdict:"MISS",        last_quarter:"Q4 FY25", unread_alert_count:1 },
+  { isin:"INE242A01010", symbol_nse:"ASHOKLEY",  company_name:"Ashok Leyland",         sector:"Automobiles",    market_cap_cr:52000,  market_cap_cat:"LARGE", cmp:180,   target_price_12m:230,   upside_pct:27.8,  expected_cagr_3y:16, rating:"BUY",        overall_signal:"YELLOW", risk_reward_score:6.2, conviction_score:58, technical_trend:"SIDEWAYS",   technical_score:51, consecutive_red:0, last_verdict:"IN_LINE",     last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE089A01023", symbol_nse:"CANBK",     company_name:"Canara Bank",           sector:"Banking",        market_cap_cr:48000,  market_cap_cat:"LARGE", cmp:88,    target_price_12m:95,    upside_pct:7.9,   expected_cagr_3y:10, rating:"HOLD",       overall_signal:"YELLOW", risk_reward_score:4.8, conviction_score:45, technical_trend:"SIDEWAYS",   technical_score:44, consecutive_red:1, last_verdict:"MISS",        last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE216A01030", symbol_nse:"BHEL",      company_name:"BHEL",                  sector:"Capital Goods",  market_cap_cr:62000,  market_cap_cat:"LARGE", cmp:178,   target_price_12m:195,   upside_pct:9.6,   expected_cagr_3y:14, rating:"HOLD",       overall_signal:"YELLOW", risk_reward_score:5.1, conviction_score:50, technical_trend:"DOWNTREND",  technical_score:36, consecutive_red:1, last_verdict:"MISS",        last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE019A01038", symbol_nse:"RBLBANK",   company_name:"RBL Bank",              sector:"Banking",        market_cap_cr:8200,   market_cap_cat:"MID",   cmp:135,   target_price_12m:130,   upside_pct:-3.7,  expected_cagr_3y:8,  rating:"SELL",       overall_signal:"RED",    risk_reward_score:2.8, conviction_score:28, technical_trend:"DOWNTREND",  technical_score:24, consecutive_red:3, last_verdict:"STRONG_MISS", last_quarter:"Q4 FY25", unread_alert_count:3 },
+  { isin:"INE108A01012", symbol_nse:"JYOTHYLAB", company_name:"Jyothy Labs",           sector:"FMCG",           market_cap_cr:7600,   market_cap_cat:"MID",   cmp:280,   target_price_12m:265,   upside_pct:-5.4,  expected_cagr_3y:7,  rating:"SELL",       overall_signal:"RED",    risk_reward_score:2.2, conviction_score:22, technical_trend:"DOWNTREND",  technical_score:28, consecutive_red:2, last_verdict:"STRONG_MISS", last_quarter:"Q4 FY25", unread_alert_count:2 },
+  { isin:"INE200A01026", symbol_nse:"RELIANCE",  company_name:"Reliance Industries",   sector:"Oil & Gas",      market_cap_cr:1620000,market_cap_cat:"LARGE", cmp:2780,  target_price_12m:3400,  upside_pct:22.3,  expected_cagr_3y:15, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:7.0, conviction_score:75, technical_trend:"SIDEWAYS",   technical_score:57, consecutive_red:0, last_verdict:"IN_LINE",     last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE117A01022", symbol_nse:"TRENT",     company_name:"Trent",                 sector:"Retail",         market_cap_cr:98000,  market_cap_cat:"LARGE", cmp:4680,  target_price_12m:6200,  upside_pct:32.5,  expected_cagr_3y:30, rating:"STRONG_BUY", overall_signal:"GREEN",  risk_reward_score:8.8, conviction_score:91, technical_trend:"UPTREND",    technical_score:82, consecutive_red:0, last_verdict:"STRONG_BEAT", last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE029A01011", symbol_nse:"UNIONBANK", company_name:"Union Bank of India",   sector:"Banking",        market_cap_cr:41000,  market_cap_cat:"LARGE", cmp:90,    target_price_12m:82,    upside_pct:-8.9,  expected_cagr_3y:6,  rating:"SELL",       overall_signal:"RED",    risk_reward_score:1.8, conviction_score:18, technical_trend:"DOWNTREND",  technical_score:20, consecutive_red:3, last_verdict:"STRONG_MISS", last_quarter:"Q4 FY25", unread_alert_count:2 },
+  { isin:"INE070A01015", symbol_nse:"HINDUNILVR",company_name:"Hindustan Unilever",    sector:"FMCG",           market_cap_cr:480000, market_cap_cat:"LARGE", cmp:2240,  target_price_12m:2600,  upside_pct:16.1,  expected_cagr_3y:12, rating:"HOLD",       overall_signal:"YELLOW", risk_reward_score:5.5, conviction_score:55, technical_trend:"SIDEWAYS",   technical_score:50, consecutive_red:0, last_verdict:"IN_LINE",     last_quarter:"Q4 FY25", unread_alert_count:0 },
+  { isin:"INE306A01021", symbol_nse:"KAJARIACER",company_name:"Kajaria Ceramics",      sector:"Building Materials",market_cap_cr:9200, market_cap_cat:"MID",   cmp:1050,  target_price_12m:1320,  upside_pct:25.7,  expected_cagr_3y:18, rating:"BUY",        overall_signal:"GREEN",  risk_reward_score:7.1, conviction_score:70, technical_trend:"UPTREND",    technical_score:66, consecutive_red:0, last_verdict:"BEAT",        last_quarter:"Q4 FY25", unread_alert_count:0 },
+];
+
+const ALERTS = [
+  { id:"a1", isin:"INE019A01038", company_name:"RBL Bank",         alert_type:"THESIS_DETERIORATING", severity:"HIGH",   title:"⚠ RBL Bank — 3 Consecutive Red Quarters",                description:"NIM compression continues; credit costs elevated; management guidance cut by 15%.", triggered_at:"2025-04-18", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a2", isin:"INE019A01038", company_name:"RBL Bank",         alert_type:"GUIDANCE_CUT",         severity:"HIGH",   title:"Guidance cut ≥10% — RBL Bank",                           description:"FY26 NIM guidance revised from 5.4% to 4.6%. Significant downgrade.", triggered_at:"2025-04-18", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a3", isin:"INE029A01011", company_name:"Union Bank",       alert_type:"THESIS_DETERIORATING", severity:"HIGH",   title:"⚠ Union Bank — 3 Consecutive Red Quarters",              description:"Asset quality deteriorating; slippage ratio rising. Thesis review required.", triggered_at:"2025-04-20", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a4", isin:"INE108A01012", company_name:"Jyothy Labs",      alert_type:"MARGIN_COMPRESSION",   severity:"MEDIUM", title:"Margin compression — Jyothy Labs",                        description:"EBITDA margin down 210bps YoY. Raw material headwinds persist.", triggered_at:"2025-04-25", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a5", isin:"INE108A01012", company_name:"Jyothy Labs",      alert_type:"THESIS_DETERIORATING", severity:"HIGH",   title:"⚠ Jyothy Labs — 2 Consecutive Red Quarters",             description:"Volume growth slowing; competition intensifying from HUL and Dabur.", triggered_at:"2025-04-26", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a6", isin:"INE029A01011", company_name:"Union Bank",       alert_type:"GUIDANCE_CUT",         severity:"HIGH",   title:"Guidance cut — Union Bank FY26 credit growth",            description:"Credit growth guidance cut from 12% to 7%. Recovery outlook weak.", triggered_at:"2025-04-22", is_read:true,  is_actioned:true,  quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a7", isin:"INE117A01022", company_name:"Trent",            alert_type:"STRONG_BEAT",          severity:"LOW",    title:"🎉 Trent — Strong Beat Q4 FY25",                          description:"Revenue +38% YoY; EBITDA margin expanded 180bps. Expansion on track.", triggered_at:"2025-04-15", is_read:true,  is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a8", isin:"INE066A01021", company_name:"ABB India",        alert_type:"STRONG_BEAT",          severity:"LOW",    title:"🎉 ABB India — Strong Beat Q4 FY25",                      description:"Order intake +42%; EBITDA margin best in 12 quarters.", triggered_at:"2025-04-17", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+  { id:"a9", isin:"INE092T01019", company_name:"Godawari Power",   alert_type:"ORDER_BOOK_MISS",      severity:"MEDIUM", title:"Order book below expectation — Godawari Power",           description:"Iron ore production guidance maintained but pellet realizations down 8%.", triggered_at:"2025-05-01", is_read:false, is_actioned:false, quarter:"Q4 FY25", fiscal_year:2025 },
+];
+
+const QUARTERLY_HISTORY = {
+  "INE019A01038": [
+    { quarter:"Q4 FY25", overall:"RED",    revenue:"RED",    ebitda:"RED",    margin:"RED",    pat:"RED",    order_book:"NA", verdict:"STRONG_MISS" },
+    { quarter:"Q3 FY25", overall:"RED",    revenue:"YELLOW", ebitda:"RED",    margin:"RED",    pat:"RED",    order_book:"NA", verdict:"MISS" },
+    { quarter:"Q2 FY25", overall:"RED",    revenue:"RED",    ebitda:"YELLOW", margin:"RED",    pat:"RED",    order_book:"NA", verdict:"MISS" },
+    { quarter:"Q1 FY25", overall:"YELLOW", revenue:"YELLOW", ebitda:"YELLOW", margin:"YELLOW", pat:"YELLOW", order_book:"NA", verdict:"IN_LINE" },
+    { quarter:"Q4 FY24", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"YELLOW", pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+    { quarter:"Q3 FY24", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"STRONG_BEAT" },
+  ],
+  "INE117A01022": [
+    { quarter:"Q4 FY25", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"STRONG_BEAT" },
+    { quarter:"Q3 FY25", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+    { quarter:"Q2 FY25", overall:"GREEN",  revenue:"GREEN",  ebitda:"YELLOW", margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+    { quarter:"Q1 FY25", overall:"YELLOW", revenue:"YELLOW", ebitda:"YELLOW", margin:"YELLOW", pat:"YELLOW", order_book:"NA", verdict:"IN_LINE" },
+    { quarter:"Q4 FY24", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"STRONG_BEAT" },
+    { quarter:"Q3 FY24", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+  ],
+  "DEFAULT": [
+    { quarter:"Q4 FY25", overall:"YELLOW", revenue:"YELLOW", ebitda:"YELLOW", margin:"YELLOW", pat:"YELLOW", order_book:"NA", verdict:"IN_LINE" },
+    { quarter:"Q3 FY25", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"YELLOW", pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+    { quarter:"Q2 FY25", overall:"YELLOW", revenue:"YELLOW", ebitda:"YELLOW", margin:"YELLOW", pat:"YELLOW", order_book:"NA", verdict:"IN_LINE" },
+    { quarter:"Q1 FY25", overall:"GREEN",  revenue:"GREEN",  ebitda:"YELLOW", margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"BEAT" },
+    { quarter:"Q4 FY24", overall:"YELLOW", revenue:"YELLOW", ebitda:"YELLOW", margin:"YELLOW", pat:"YELLOW", order_book:"NA", verdict:"IN_LINE" },
+    { quarter:"Q3 FY24", overall:"GREEN",  revenue:"GREEN",  ebitda:"GREEN",  margin:"GREEN",  pat:"GREEN",  order_book:"NA", verdict:"STRONG_BEAT" },
+  ],
+};
+
+const SCENARIOS = {
+  "INE117A01022": [
+    { type:"BULL", target:7800, cagr:38, prob:0.30, triggers:["Zudio 600 stores by FY27","Online GMV ₹3000Cr","Private label >55%"], risks:["Urban slowdown","Competition"] },
+    { type:"BASE", target:6200, cagr:30, prob:0.50, triggers:["Zudio 480 stores","Same-store growth 12%"], risks:["Rental cost inflation"] },
+    { type:"BEAR", target:4200, cagr:12, prob:0.20, triggers:[], risks:["Consumer slowdown","Failed Zudio expansion"] },
+  ],
+  "INE019A01038": [
+    { type:"BULL", target:195, cagr:24, prob:0.20, triggers:["NIM recovery to 5.4%","Microfinance turnaround"], risks:[] },
+    { type:"BASE", target:145, cagr:8,  prob:0.40, triggers:["Gradual NIM recovery","Cost efficiency"], risks:["Credit cost pressure"] },
+    { type:"BEAR", target:90,  cagr:-8, prob:0.40, triggers:[], risks:["Asset quality deterioration","Capital raise dilution","MFI book write-offs"] },
+  ],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let allStocks = STOCKS;
+let filteredStocks = [...STOCKS];
+let currentSort = { col: "risk_reward_score", dir: -1 };
+let signalFilter = "";
+let chartsRendered = false;
+let alertChartsRendered = false;
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+function loadDashboard() {
+  allStocks = STOCKS;
+  filteredStocks = [...STOCKS];
+  updateStats();
+  populateSectorFilter();
+  sortBy("risk_reward_score");
+  buildHeatmap();
+  buildAlertFeed();
+  const unread = ALERTS.filter(a => !a.is_read).length;
+  const badge = document.getElementById("alert-badge");
+  if (unread > 0) { badge.style.display = "inline"; badge.textContent = `${unread} alerts`; }
+}
+
+function updateStats() {
+  const green  = allStocks.filter(s => s.overall_signal === "GREEN").length;
+  const yellow = allStocks.filter(s => s.overall_signal === "YELLOW").length;
+  const red    = allStocks.filter(s => s.overall_signal === "RED").length;
+  const avgCagr = (allStocks.reduce((a, b) => a + (b.expected_cagr_3y || 0), 0) / allStocks.length).toFixed(0);
+  const unread  = ALERTS.filter(a => !a.is_read).length;
+  document.getElementById("stat-total").textContent  = allStocks.length;
+  document.getElementById("stat-green-count").textContent  = green;
+  document.getElementById("stat-yellow-count").textContent = yellow;
+  document.getElementById("stat-red-count").textContent    = red;
+  document.getElementById("stat-avg-cagr").textContent = avgCagr + "%";
+  document.getElementById("stat-alerts").textContent   = unread;
+  document.getElementById("header-sub").textContent    = `${allStocks.length} stocks tracked · ${unread} unread alerts`;
+}
+
+function populateSectorFilter() {
+  const sectors = [...new Set(allStocks.map(s => s.sector).filter(Boolean))].sort();
+  const sel = document.getElementById("sector-filter");
+  sel.innerHTML = `<option value="">All Sectors</option>` + sectors.map(s => `<option value="${s}">${s}</option>`).join("");
+}
+
+function applyFilters() {
+  const search  = document.getElementById("search-input").value.toLowerCase();
+  const signal  = document.getElementById("signal-filter").value;
+  const mcap    = document.getElementById("mcap-filter").value;
+  const sector  = document.getElementById("sector-filter").value;
+  filteredStocks = allStocks.filter(s =>
+    (!search || s.company_name.toLowerCase().includes(search) || (s.symbol_nse||"").toLowerCase().includes(search)) &&
+    (!signal || s.overall_signal === signal) &&
+    (!mcap   || s.market_cap_cat === mcap) &&
+    (!sector || s.sector === sector)
+  );
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById("search-input").value = "";
+  document.getElementById("signal-filter").value = "";
+  document.getElementById("mcap-filter").value = "";
+  document.getElementById("sector-filter").value = "";
+  signalFilter = "";
+  filteredStocks = [...allStocks];
+  renderTable();
+}
+
+function filterSignal(sig) {
+  signalFilter = sig;
+  document.getElementById("signal-filter").value = sig;
+  applyFilters();
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (currentSort.col === col) currentSort.dir *= -1;
+  else { currentSort.col = col; currentSort.dir = (col === "company_name" || col === "sector") ? 1 : -1; }
+  document.querySelectorAll(".sort-arrow").forEach(el => el.textContent = "");
+  const el = document.getElementById(`sort-${col}`);
+  if (el) el.textContent = currentSort.dir === 1 ? " ↑" : " ↓";
+  filteredStocks.sort((a, b) => {
+    const av = a[col], bv = b[col];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (typeof av === "string") return currentSort.dir * av.localeCompare(bv);
+    return currentSort.dir * (av - bv);
+  });
+  renderTable();
+}
+
+// ── Render table ───────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById("portfolio-tbody");
+  const empty = document.getElementById("portfolio-empty");
+  if (filteredStocks.length === 0) { tbody.innerHTML = ""; empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  tbody.innerHTML = filteredStocks.map(s => {
+    const danger = s.consecutive_red >= 2;
+    const trendIcon = { UPTREND:"↑", DOWNTREND:"↓", SIDEWAYS:"→", REVERSAL_UP:"↗", REVERSAL_DOWN:"↘" }[s.technical_trend] || "→";
+    const trendClass = s.technical_trend === "UPTREND" ? "trend-up" : s.technical_trend === "DOWNTREND" ? "trend-dn" : "trend-sw";
+    const rrColor = (s.risk_reward_score||0) >= 7 ? "#10b981" : (s.risk_reward_score||0) >= 5 ? "#f59e0b" : "#ef4444";
+    const upClass = (s.upside_pct||0) > 0 ? "upside-pos" : "upside-neg";
+    return `<tr class="${danger ? "danger-row":""}" onclick="openDetail('${s.isin}')">
+      <td>
+        <div style="font-weight:600;color:#1e293b;">${s.company_name}</div>
+        <div style="font-size:10px;color:#64748b;">${s.symbol_nse||s.isin}${danger ? ` <span style="color:#ef4444;">⚠ ${s.consecutive_red}× red</span>`:""}</div>
+      </td>
+      <td><span style="background:#f1f5f9;color:#374151;padding:2px 7px;border-radius:4px;font-size:10px;">${s.sector||"—"}</span></td>
+      <td style="text-align:right;color:#374151;">₹${(s.market_cap_cr||0).toLocaleString("en-IN")}</td>
+      <td style="text-align:right;font-weight:600;">₹${(s.cmp||0).toLocaleString("en-IN")}</td>
+      <td style="text-align:right;"><span class="${upClass}">${s.upside_pct != null ? (s.upside_pct>0?"+":"")+s.upside_pct.toFixed(1)+"%" : "—"}</span></td>
+      <td style="text-align:right;"><span class="cagr-val">${s.expected_cagr_3y != null ? s.expected_cagr_3y.toFixed(0)+"%" : "—"}</span></td>
+      <td><span class="sig sig-${s.overall_signal}"><span class="sig-dot"></span>${s.overall_signal}</span></td>
+      <td><span class="rating-badge r-${s.rating}">${s.rating.replace("_"," ")}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="rr-bar"><span class="rr-fill" style="width:${(s.risk_reward_score||0)*10}%;background:${rrColor};"></span></span>
+          <span style="font-weight:600;color:${rrColor};font-size:11px;">${s.risk_reward_score?.toFixed(1)||"—"}</span>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="${trendClass}" style="font-size:14px;">${trendIcon}</span>
+          <span style="font-size:10px;color:#64748b;">${s.technical_score?.toFixed(0)||"—"}</span>
+        </div>
+      </td>
+      <td>
+        <span class="verdict v-${s.last_verdict||"NA"}">${(s.last_verdict||"NA").replace("_"," ")}</span>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${s.last_quarter||"—"}</div>
+      </td>
+      <td style="text-align:center;">
+        ${s.unread_alert_count > 0 ? `<span class="alert-dot">${s.unread_alert_count}</span>` : `<span style="color:#e2e8f0;">—</span>`}
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// ── Heatmap ────────────────────────────────────────────────────────────────────
+function buildHeatmap() {
+  const quarters = ["Q4 FY25","Q3 FY25","Q2 FY25","Q1 FY25","Q4 FY24","Q3 FY24"];
+  const sigMap = { GREEN:"B", YELLOW:"I", RED:"M", NA:"—" };
+  const head = document.getElementById("heatmap-head");
+  const body = document.getElementById("heatmap-body");
+  head.innerHTML = `<tr><th style="text-align:left;">Company</th>${quarters.map(q=>`<th>${q}</th>`).join("")}</tr>`;
+  body.innerHTML = allStocks.map(s => {
+    const hist = QUARTERLY_HISTORY[s.isin] || QUARTERLY_HISTORY.DEFAULT;
+    const cells = quarters.map(q => {
+      const row = hist.find(h => h.quarter === q);
+      const sig = row ? row.overall : "NA";
+      return `<td class="hm-${sig}" title="${s.company_name} ${q}: ${sig}">${sigMap[sig]||"—"}</td>`;
+    }).join("");
+    return `<tr onclick="openDetail('${s.isin}')"><td class="hm-company">${s.company_name}</td>${cells}</tr>`;
+  }).join("");
+}
+
+// ── Alert feed ─────────────────────────────────────────────────────────────────
+function buildAlertFeed() {
+  const list = document.getElementById("alerts-list");
+  const sorted = [...ALERTS].sort((a, b) => {
+    if (!a.is_read && b.is_read) return -1;
+    if (a.is_read && !b.is_read) return 1;
+    const sevOrder = { HIGH:0, MEDIUM:1, LOW:2 };
+    return (sevOrder[a.severity]||3) - (sevOrder[b.severity]||3);
+  });
+  list.innerHTML = sorted.map(a => `
+    <div class="alert-item" style="${a.is_read ? "opacity:0.5;" : ""}">
+      <span class="alert-sev sev-${a.severity}">${a.severity}</span>
+      <div class="alert-body">
+        <div class="at">${a.title}</div>
+        <div class="ad">${a.description}</div>
+        <div class="am">${a.company_name} · ${a.quarter||""} FY${a.fiscal_year||""} · ${new Date(a.triggered_at).toLocaleDateString("en-IN")} · ${a.alert_type.replace(/_/g," ")}${a.is_actioned ? " · <span style=\"color:#10b981;\">✓ Actioned</span>":""}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────────
+function buildCharts() {
+  if (chartsRendered) return;
+  chartsRendered = true;
+
+  // Signal doughnut
+  const green  = allStocks.filter(s => s.overall_signal === "GREEN").length;
+  const yellow = allStocks.filter(s => s.overall_signal === "YELLOW").length;
+  const red    = allStocks.filter(s => s.overall_signal === "RED").length;
+  new Chart(document.getElementById("signal-chart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Green", "Yellow", "Red"],
+      datasets: [{ data: [green, yellow, red], backgroundColor: ["#10b981","#f59e0b","#ef4444"], borderWidth: 2, borderColor: "#fff" }]
+    },
+    options: { plugins: { legend: { position: "right", labels: { font: { size: 11 } } } } }
+  });
+
+  // CAGR horizontal bar
+  const topCagr = [...allStocks].sort((a,b) => (b.expected_cagr_3y||0) - (a.expected_cagr_3y||0)).slice(0, 8);
+  new Chart(document.getElementById("cagr-chart"), {
+    type: "bar",
+    data: {
+      labels: topCagr.map(s => s.symbol_nse||s.company_name.slice(0,10)),
+      datasets: [{ label: "CAGR %", data: topCagr.map(s => s.expected_cagr_3y||0), backgroundColor: "#6366f1", borderRadius: 4 }]
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { grid: { color: "#f1f5f9" } } } }
+  });
+
+  // Sector bar
+  const sectorMap = {};
+  allStocks.forEach(s => { sectorMap[s.sector||"Other"] = (sectorMap[s.sector||"Other"]||0) + 1; });
+  const sEntries = Object.entries(sectorMap).sort((a,b) => b[1]-a[1]);
+  new Chart(document.getElementById("sector-chart"), {
+    type: "bar",
+    data: {
+      labels: sEntries.map(e => e[0]),
+      datasets: [{ label: "Stocks", data: sEntries.map(e => e[1]), backgroundColor: "#0ea5e9", borderRadius: 3 }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 }, grid: { color: "#f1f5f9" } } } }
+  });
+
+  // Beat/miss over time (mock)
+  new Chart(document.getElementById("beat-chart"), {
+    type: "line",
+    data: {
+      labels: ["Q3 FY24","Q4 FY24","Q1 FY25","Q2 FY25","Q3 FY25","Q4 FY25"],
+      datasets: [
+        { label: "Beat %",    data: [68, 72, 60, 64, 71, 58], borderColor: "#10b981", backgroundColor: "#d1fae5", fill: true, tension: 0.3 },
+        { label: "Miss %",    data: [18, 14, 22, 20, 16, 27], borderColor: "#ef4444", backgroundColor: "transparent", tension: 0.3 },
+        { label: "In-line %", data: [14, 14, 18, 16, 13, 15], borderColor: "#f59e0b", backgroundColor: "transparent", tension: 0.3 },
+      ]
+    },
+    options: { plugins: { legend: { labels: { font: { size: 11 } } } }, scales: { y: { max: 100, grid: { color: "#f1f5f9" } } } }
+  });
+}
+
+function buildAlertCharts() {
+  if (alertChartsRendered) return;
+  alertChartsRendered = true;
+  const typeMap = {};
+  ALERTS.forEach(a => { typeMap[a.alert_type] = (typeMap[a.alert_type]||0) + 1; });
+  const tEntries = Object.entries(typeMap).sort((a,b) => b[1]-a[1]).slice(0,6);
+  const COLORS = ["#ef4444","#f97316","#eab308","#6366f1","#14b8a6","#84cc16"];
+  new Chart(document.getElementById("alert-type-chart"), {
+    type: "bar",
+    data: {
+      labels: tEntries.map(e => e[0].replace(/_/g," ")),
+      datasets: [{ label: "Count", data: tEntries.map(e => e[1]), backgroundColor: COLORS, borderRadius: 4 }]
+    },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { ticks: { stepSize: 1 }, grid: { color: "#f1f5f9" } } } }
+  });
+  const high   = ALERTS.filter(a => a.severity === "HIGH").length;
+  const medium = ALERTS.filter(a => a.severity === "MEDIUM").length;
+  const low    = ALERTS.filter(a => a.severity === "LOW").length;
+  new Chart(document.getElementById("severity-chart"), {
+    type: "doughnut",
+    data: {
+      labels: ["High","Medium","Low"],
+      datasets: [{ data: [high, medium, low], backgroundColor: ["#ef4444","#f97316","#3b82f6"], borderWidth: 2, borderColor: "#fff" }]
+    },
+    options: { plugins: { legend: { position: "right", labels: { font: { size: 11 } } } } }
+  });
+}
+
+// ── Detail panel ───────────────────────────────────────────────────────────────
+function openDetail(isin) {
+  const s = allStocks.find(x => x.isin === isin);
+  if (!s) return;
+  document.getElementById("dp-name").textContent = s.company_name;
+  document.getElementById("dp-sub").textContent  = `${s.symbol_nse||isin} · ${s.sector||"—"} · ${s.market_cap_cat} Cap`;
+
+  const hist   = QUARTERLY_HISTORY[isin] || QUARTERLY_HISTORY.DEFAULT;
+  const scens  = SCENARIOS[isin] || [];
+  const alerts = ALERTS.filter(a => a.isin === isin);
+  const sigCfg = { GREEN:"#d1fae5:#065f46", YELLOW:"#fef3c7:#92400e", RED:"#fee2e2:#7f1d1d", NA:"#f1f5f9:#6b7280" };
+  const [bg, tc] = (sigCfg[s.overall_signal]||sigCfg.NA).split(":");
+  const METRIC_LABELS = { revenue:"Revenue", ebitda:"EBITDA", margin:"Margin", pat:"PAT", order_book:"Order Book" };
+
+  document.getElementById("dp-content").innerHTML = `
+    <!-- Price block -->
+    <div class="detail-section">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        ${[
+          ["CMP", s.cmp!=null?`₹${s.cmp.toLocaleString("en-IN")}`:"—", ""],
+          ["Target 12M", s.target_price_12m!=null?`₹${s.target_price_12m.toLocaleString("en-IN")}`:"—", ""],
+          ["Upside", s.upside_pct!=null?`${s.upside_pct>0?"+":""}${s.upside_pct.toFixed(1)}%`:"—", s.upside_pct>=0?"color:#10b981":"color:#ef4444"],
+          ["CAGR 3Y", s.expected_cagr_3y!=null?`${s.expected_cagr_3y.toFixed(0)}%`:"—", "color:#6366f1"],
+          ["R/R Score", s.risk_reward_score!=null?`${s.risk_reward_score.toFixed(1)}/10`:"—", ""],
+          ["Signal", `<span class="sig sig-${s.overall_signal}"><span class="sig-dot"></span>${s.overall_signal}</span>`, ""],
+        ].map(([l,v,st]) => `<div style="background:#f8fafc;border-radius:8px;padding:8px;"><div style="font-size:10px;color:#64748b;">${l}</div><div style="font-size:14px;font-weight:700;margin-top:2px;${st}">${v}</div></div>`).join("")}
+      </div>
+    </div>
+
+    <!-- Scenarios -->
+    ${scens.length>0 ? `
+    <div class="detail-section">
+      <h4>Bull / Base / Bear</h4>
+      ${["BULL","BASE","BEAR"].map(type => {
+        const sc = scens.find(x => x.type === type);
+        if (!sc) return "";
+        const cls = type==="BULL"?"sc-bull":type==="BASE"?"sc-base":"sc-bear";
+        const ico = type==="BULL"?"🐂":type==="BASE"?"📊":"🐻";
+        return `<div class="scenario-card ${cls}">
+          <div class="sc-title">${ico} ${type} — ₹${sc.target} (${sc.cagr>0?"+":""}${sc.cagr}%)</div>
+          <div class="sc-row"><span>Probability</span><span style="font-weight:600;">${(sc.prob*100).toFixed(0)}%</span></div>
+          ${(sc.triggers||[]).map(t=>`<div style="font-size:10px;color:#374151;margin-top:3px;">✓ ${t}</div>`).join("")}
+          ${(sc.risks||[]).map(r=>`<div style="font-size:10px;color:#ef4444;margin-top:2px;">⚠ ${r}</div>`).join("")}
+        </div>`;
+      }).join("")}
+    </div>` : ""}
+
+    <!-- Quarterly history -->
+    <div class="detail-section">
+      <h4>Quarterly Results</h4>
+      ${hist.map(r => {
+        const vcls = `v-${r.verdict||"NA"}`;
+        return `<div class="q-row">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;font-weight:600;">${r.quarter}</span>
+            <span class="verdict ${vcls}">${(r.verdict||"NA").replace("_"," ")}</span>
+          </div>
+          <div class="q-metric-row">
+            ${["revenue","ebitda","margin","pat","order_book"].map(m => `<span class="q-sig q-sig-${r[m]||"NA"}" title="${METRIC_LABELS[m]}">${m.slice(0,3).toUpperCase()}</span>`).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <!-- Technicals -->
+    <div class="detail-section">
+      <h4>Technicals</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        ${[
+          ["Trend", `<span class="${s.technical_trend==="UPTREND"?"trend-up":s.technical_trend==="DOWNTREND"?"trend-dn":"trend-sw"}">${{UPTREND:"↑ UPTREND",DOWNTREND:"↓ DOWNTREND",SIDEWAYS:"→ SIDEWAYS"}[s.technical_trend]||"—"}</span>`],
+          ["Tech Score", `${s.technical_score?.toFixed(0)||"—"}/100`],
+          ["Rating", `<span class="rating-badge r-${s.rating}">${s.rating.replace("_"," ")}</span>`],
+          ["Consec. Red", s.consecutive_red > 0 ? `<span style="color:#ef4444;font-weight:600;">${s.consecutive_red} quarters</span>` : "0"],
+        ].map(([l,v]) => `<div style="font-size:11px;"><span style="color:#64748b;">${l}:</span> ${v}</div>`).join("")}
+      </div>
+    </div>
+
+    <!-- Alerts for this stock -->
+    ${alerts.length>0 ? `
+    <div class="detail-section">
+      <h4>Alerts (${alerts.length})</h4>
+      ${alerts.map(a => `
+        <div class="alert-item" style="${a.is_read?"opacity:0.5;":""}">
+          <span class="alert-sev sev-${a.severity}">${a.severity}</span>
+          <div class="alert-body">
+            <div class="at" style="font-size:11px;">${a.title}</div>
+            <div class="am">${new Date(a.triggered_at).toLocaleDateString("en-IN")} · ${a.alert_type.replace(/_/g," ")}</div>
+          </div>
+        </div>`).join("")}
+    </div>` : ""}
+
+    <div style="padding:12px 20px;">
+      <a href="/tracker/${isin}" style="display:block;text-align:center;background:#6366f1;color:white;border-radius:8px;padding:10px;font-size:12px;font-weight:600;text-decoration:none;" target="_parent">Open Full Detail →</a>
+    </div>
+  `;
+
+  document.getElementById("detail-panel").classList.add("open");
+  document.getElementById("overlay").classList.add("show");
+}
+
+function closePanel() {
+  document.getElementById("detail-panel").classList.remove("open");
+  document.getElementById("overlay").classList.remove("show");
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-portfolio").style.display = "none";
+  document.getElementById("tab-heatmap").style.display   = "none";
+  document.getElementById("tab-alerts").style.display    = "none";
+  document.getElementById("tab-charts").style.display    = "none";
+  document.getElementById(`tab-${tab}`).style.display    = "block";
+  if (tab === "charts") buildCharts();
+  if (tab === "alerts") buildAlertCharts();
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────────
+loadDashboard();
+// Default sort on load
+document.getElementById("sort-risk_reward_score").textContent = " ↓";
+</script>
+</body>
+</html>

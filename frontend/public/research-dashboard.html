@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Company Research Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0;
+    --text: #0f172a; --muted: #64748b; --accent: #4f46e5;
+    --accent-light: #eef2ff; --emerald: #059669; --red: #dc2626;
+    --amber: #d97706; --blue: #2563eb;
+  }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* Layout */
+  .app { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; position: sticky; top: 0; z-index: 100; }
+  .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .logo i { color: var(--accent); }
+  .search-bar { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; flex: 1; max-width: 320px; }
+  .search-bar input { border: none; background: transparent; outline: none; font-size: 13px; width: 100%; }
+
+  /* Cards grid */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 20px 0; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .metric-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .metric-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-top: 20px; }
+  .tab { padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); transition: all .15s; }
+  .tab.active { border-color: var(--accent); color: var(--accent); }
+  .tab-content { display: none; padding: 20px 0; }
+  .tab-content.active { display: block; }
+
+  /* Section card */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+  .section-header { padding: 14px 18px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-bottom: 1px solid var(--border); background: #fafafa; }
+  .section-header i { color: var(--accent); }
+  .section-body { padding: 18px; }
+
+  /* Rating badge */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge-strong-buy { background: #dcfce7; color: #166534; }
+  .badge-buy { background: #f0fdf4; color: #15803d; }
+  .badge-accumulate { background: #eff6ff; color: var(--blue); }
+  .badge-hold { background: #fffbeb; color: var(--amber); }
+  .badge-reduce { background: #fff7ed; color: #c2410c; }
+  .badge-sell { background: #fef2f2; color: var(--red); }
+  .badge-avoid { background: #f1f5f9; color: #475569; }
+
+  /* Scenarios */
+  .scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .scenario-card { border-radius: 12px; padding: 18px; }
+  .scenario-card.bull { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
+  .scenario-card.base { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
+  .scenario-card.bear { background: #fef2f2; border: 1px solid #fecaca; color: #7f1d1d; }
+  .scenario-label { font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+  .scenario-stat { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+  .scenario-val { font-size: 20px; font-weight: 800; }
+  .scenario-text { font-size: 12px; line-height: 1.5; margin-top: 10px; opacity: .8; }
+
+  /* SWOT */
+  .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .swot-section h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .swot-section.s h4 { color: var(--emerald); }
+  .swot-section.w h4 { color: var(--amber); }
+  .swot-section.o h4 { color: var(--blue); }
+  .swot-section.t h4 { color: var(--red); }
+  .swot-item { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; line-height: 1.4; }
+
+  /* Fields */
+  .field-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .field-name { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .field-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .field-meta { font-size: 10px; color: var(--muted); margin-top: 6px; }
+  .conf-bar { height: 4px; background: #e2e8f0; border-radius: 99px; margin-top: 4px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 99px; }
+
+  /* Universe table */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; background: #fafafa; }
+  tr:hover td { background: #f8fafc; }
+  .company-link { font-weight: 600; color: var(--accent); cursor: pointer; }
+  .company-link:hover { text-decoration: underline; }
+  .upside-pos { color: var(--emerald); font-weight: 700; }
+  .upside-neg { color: var(--red); font-weight: 700; }
+
+  /* Thesis */
+  .thesis-box { background: var(--accent-light); border: 1px solid #c7d2fe; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .thesis-box i { color: var(--accent); margin-top: 2px; }
+  .thesis-text { font-size: 13px; line-height: 1.6; font-weight: 500; color: #312e81; }
+  .thesis-conf { font-size: 11px; color: #6366f1; margin-left: auto; white-space: nowrap; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .scenarios { grid-template-columns: 1fr; }
+    .swot-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .spinner { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .trigger-btn { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .trigger-btn:hover { background: #4338ca; }
+  .trigger-btn:disabled { opacity: .6; cursor: default; }
+  .separator { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo"><i class="fas fa-book-open"></i> Research Intelligence</div>
+    <div class="search-bar">
+      <i class="fas fa-search" style="color:var(--muted);font-size:12px"></i>
+      <input id="searchInput" placeholder="Search company or ISIN…" oninput="filterUniverse()">
+    </div>
+    <button class="trigger-btn" id="triggerBtn" onclick="triggerResearch()">
+      <i class="fas fa-sync-alt"></i> Refresh Research
+    </button>
+  </div>
+</div>
+
+<div class="app" style="padding-top:24px">
+
+  <!-- Company Header -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:4px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:48px;height:48px;background:var(--accent-light);border-radius:12px;display:flex;align-items:center;justify-content:center">
+          <i class="fas fa-industry" style="color:var(--accent);font-size:18px"></i>
+        </div>
+        <div>
+          <h2 style="font-size:18px;font-weight:800" id="companyName">Larsen & Toubro Limited</h2>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--muted)" id="companyISIN">INE018A01030</span>
+            <span style="background:#f1f5f9;border-radius:999px;padding:2px 10px;font-size:11px;color:var(--muted)" id="companySector">Engineering & Capital Goods</span>
+            <span class="badge badge-buy" id="ratingBadge">BUY</span>
+            <span class="upside-pos" id="upsideDisplay" style="font-size:12px"><i class="fas fa-arrow-trend-up" style="font-size:10px"></i> +24.3% upside</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:right">
+        <div>Last updated: <strong id="lastUpdated">15 Jun 2026</strong></div>
+        <div>Report v<strong id="reportVersion">3</strong> · Confidence: <strong id="confScore">78/100</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview',this)">Overview</div>
+    <div class="tab" onclick="switchTab('thesis',this)">Thesis & SWOT</div>
+    <div class="tab" onclick="switchTab('scenarios',this)">Scenarios</div>
+    <div class="tab" onclick="switchTab('fields',this)">Research Fields</div>
+    <div class="tab" onclick="switchTab('universe',this)">Universe</div>
+  </div>
+
+  <!-- ── OVERVIEW ──────────────────────────────────────────────────────── -->
+  <div id="tab-overview" class="tab-content active">
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Market Cap</div>
+        <div class="metric-value" style="color:var(--text)">₹3.62L Cr</div>
+        <div class="metric-sub">Large Cap</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Current Price</div>
+        <div class="metric-value">₹3,290</div>
+        <div class="metric-sub">NSE: LT</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Target (12M)</div>
+        <div class="metric-value" style="color:var(--emerald)">₹4,090</div>
+        <div class="metric-sub">Base case</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Expected 3Y CAGR</div>
+        <div class="metric-value" style="color:var(--accent)">+18.4%</div>
+        <div class="metric-sub">Base assumption</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Revenue TTM</div>
+        <div class="metric-value">₹2.36L Cr</div>
+        <div class="metric-sub">+15.2% YoY</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">EBITDA Margin</div>
+        <div class="metric-value">12.1%</div>
+        <div class="metric-sub">+80 bps YoY</div>
+      </div>
+    </div>
+
+    <!-- Chart: Financials trend -->
+    <div class="section">
+      <div class="section-header"><i class="fas fa-chart-line"></i> Financial Trends (FY22–FY26E)</div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div><canvas id="revenueChart" height="200"></canvas></div>
+          <div><canvas id="marginChart" height="200"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent docs -->
+    <div class="section">
+      <div class="section-header"><i class="fas fa-file-alt"></i> Source Documents</div>
+      <div class="section-body" style="padding:0">
+        <table>
+          <thead><tr><th>Document</th><th>Type</th><th>Source</th><th>Date</th></tr></thead>
+          <tbody id="docsTable">
+            <tr><td>Q4FY26 Investor Presentation</td><td><span class="badge" style="background:#eff6ff;color:var(--blue)">INVESTOR PRES</span></td><td>BSE</td><td>28 May 2026</td></tr>
+            <tr><td>Q4FY26 Earnings Conference Call Transcript</td><td><span class="badge" style="background:#f0fdf4;color:var(--emerald)">CONCALL</span></td><td>BSE</td><td>22 May 2026</td></tr>
+            <tr><td>FY26 Annual Report</td><td><span class="badge" style="background:#faf5ff;color:#7c3aed">ANNUAL REPORT</span></td><td>BSE</td><td>10 May 2026</td></tr>
+            <tr><td>Order Win: ₹8,200 Cr Railway Contract</td><td><span class="badge" style="background:#fff7ed;color:var(--amber)">BSE ANNOUNCE</span></td><td>BSE</td><td>2 Jun 2026</td></tr>
+            <tr><td>Management Interview — MD on Infra Outlook</td><td><span class="badge" style="background:#fef2f2;color:var(--red)">MGMT INTERVIEW</span></td><td>ET Now</td><td>18 May 2026</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── THESIS & SWOT ──────────────────────────────────────────────────── -->
+  <div id="tab-thesis" class="tab-content">
+    <div class="thesis-box">
+      <i class="fas fa-star"></i>
+      <p class="thesis-text" id="oneLiner">
+        L&T is India's pre-eminent engineering conglomerate, uniquely positioned to benefit from ₹50L Cr infrastructure push, with a ₹5.5L Cr order book providing 2.3 years of revenue visibility.
+      </p>
+      <span class="thesis-conf">Confidence: 78/100</span>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><i class="fas fa-book"></i> Investment Thesis</div>
+      <div class="section-body">
+        <p style="line-height:1.8;font-size:13px;color:var(--text)" id="thesisText">
+          Larsen & Toubro stands as India's most diversified engineering and construction conglomerate, with operations spanning infrastructure, hydrocarbon, defence, heavy engineering, and IT services. The company benefits from a structural multi-decade capex cycle in India driven by government spending on roads, railways, airports, ports, urban infrastructure, and defence indigenisation.<br><br>
+          The order book of ₹5.5L Cr (as of Q4FY26) — at 2.3x TTM revenue — provides exceptional earnings visibility through FY28. Order inflows have accelerated to ₹2.8L Cr in FY26 (+22% YoY), reflecting L&T's dominant market positioning in infrastructure project execution. The international order pipeline — now 35% of backlog — diversifies revenue and reduces India-specific risk.<br><br>
+          Margin improvement is a key re-rating trigger: EBITDA margins have expanded from 10.8% in FY23 to 12.1% in FY26, with management guiding 13–14% by FY28 as higher-margin international projects and Defence segment scale. With a robust balance sheet (net cash positive at holding company), strong execution capability, and ESG leadership, L&T deserves a premium multiple.
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><i class="fas fa-th-large"></i> SWOT Analysis</div>
+      <div class="section-body">
+        <div class="swot-grid">
+          <div class="swot-section s">
+            <h4>✅ Strengths</h4>
+            <div class="swot-item"><span>•</span><div><strong>Dominant order book visibility</strong><br><small style="color:var(--muted)">₹5.5L Cr backlog at 2.3x revenue — 90% confidence</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Unmatched execution capability</strong><br><small style="color:var(--muted)">50+ years track record across 50 countries</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Defence indigenisation beneficiary</strong><br><small style="color:var(--muted)">₹90,000 Cr defence pipeline; sole Indian supplier for many systems</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Strong balance sheet</strong><br><small style="color:var(--muted)">Net cash positive at holdco; D/E 0.8x including project financing</small></div></div>
+          </div>
+          <div class="swot-section w">
+            <h4>⚠️ Weaknesses</h4>
+            <div class="swot-item"><span>•</span><div><strong>Diversified conglomerate discount</strong><br><small style="color:var(--muted)">Market undervalues IT (LTIMindtree) and Finance arms</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Working capital intensity</strong><br><small style="color:var(--muted)">Debtor days 95 days; construction business requires large upfront capital</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Geopolitical risk in Middle East</strong><br><small style="color:var(--muted)">35% of backlog from GCC region — currency/political sensitivity</small></div></div>
+          </div>
+          <div class="swot-section o">
+            <h4>🚀 Opportunities</h4>
+            <div class="swot-item"><span>•</span><div><strong>₹50L Cr NIP 2025–30</strong><br><small style="color:var(--muted)">National Infrastructure Pipeline; L&T best-positioned to capture 8–10% share</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Data centre / green energy capex</strong><br><small style="color:var(--muted)">New segment; ₹15,000 Cr pipeline already identified</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Export potential in hydrocarbons</strong><br><small style="color:var(--muted)">Middle East LNG/petrochemical investments accelerating</small></div></div>
+          </div>
+          <div class="swot-section t">
+            <h4>🔴 Threats</h4>
+            <div class="swot-item"><span>•</span><div><strong>Election-cycle government capex slowdown</strong><br><small style="color:var(--muted)">Historically orders slow 6–9 months around state elections</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Commodity inflation</strong><br><small style="color:var(--muted)">Steel/cement price spike can compress project margins by 100–150 bps</small></div></div>
+            <div class="swot-item"><span>•</span><div><strong>Key-man risk</strong><br><small style="color:var(--muted)">Succession uncertainty post current MD's tenure ending 2027</small></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCENARIOS ─────────────────────────────────────────────────────── -->
+  <div id="tab-scenarios" class="tab-content">
+    <div class="scenarios" style="margin-bottom:20px">
+      <div class="scenario-card bull">
+        <div class="scenario-label">🟢 Bull Case <small style="font-weight:400;opacity:.7">(30%)</small></div>
+        <div class="scenario-stat">3Y CAGR</div><div class="scenario-val">+28%</div>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <div><div class="scenario-stat">Fair Value</div><div style="font-size:15px;font-weight:700">₹5,200</div></div>
+          <div><div class="scenario-stat">Upside</div><div style="font-size:15px;font-weight:700">+58%</div></div>
+        </div>
+        <div class="scenario-text">Government capex sustains at ₹12L Cr/year through FY29. L&T wins 25% of Defence DPP orders. Margin expands to 14.5%. LTIMindtree demerger unlocks conglomerate discount. International order book crosses ₹2.5L Cr. Target P/E: 32x FY28E EPS.</div>
+      </div>
+      <div class="scenario-card base">
+        <div class="scenario-label">🔵 Base Case <small style="font-weight:400;opacity:.7">(45%)</small></div>
+        <div class="scenario-stat">3Y CAGR</div><div class="scenario-val">+18%</div>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <div><div class="scenario-stat">Fair Value</div><div style="font-size:15px;font-weight:700">₹4,090</div></div>
+          <div><div class="scenario-stat">Upside</div><div style="font-size:15px;font-weight:700">+24%</div></div>
+        </div>
+        <div class="scenario-text">Revenue CAGR of 14% over FY26–28. EBITDA margin steady at 12.5–13%. Order inflows of ₹2.5L Cr/year. Working capital improves by 5 days. D/E stays below 1x. Blended P/E: 26x FY28E EPS.</div>
+      </div>
+      <div class="scenario-card bear">
+        <div class="scenario-label">🔴 Bear Case <small style="font-weight:400;opacity:.7">(25%)</small></div>
+        <div class="scenario-stat">3Y CAGR</div><div class="scenario-val">+6%</div>
+        <div style="display:flex;gap:16px;margin-top:8px">
+          <div><div class="scenario-stat">Fair Value</div><div style="font-size:15px;font-weight:700">₹2,800</div></div>
+          <div><div class="scenario-stat">Downside</div><div style="font-size:15px;font-weight:700">-15%</div></div>
+        </div>
+        <div class="scenario-text">Government capex slows post-elections. Middle East geopolitical escalation delays GCC projects. Commodity inflation compresses margins to 10.5%. New order inflows fall 20% YoY. Stock de-rates to 20x on growth disappointment.</div>
+      </div>
+    </div>
+
+    <!-- Probability-weighted valuation -->
+    <div class="section">
+      <div class="section-header"><i class="fas fa-balance-scale"></i> Probability-Weighted Valuation</div>
+      <div class="section-body">
+        <canvas id="valuationChart" height="120"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><i class="fas fa-table"></i> Valuation Summary</div>
+      <div class="section-body" style="padding:0">
+        <table>
+          <thead><tr><th>Scenario</th><th>Prob</th><th>Fair Value</th><th>vs Current</th><th>3Y CAGR</th><th>P/E (FY28E)</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-buy">BULL</span></td><td>30%</td><td style="font-weight:700">₹5,200</td><td class="upside-pos">+58.1%</td><td class="upside-pos">+28%</td><td>32x</td></tr>
+            <tr><td><span class="badge badge-accumulate">BASE</span></td><td>45%</td><td style="font-weight:700">₹4,090</td><td class="upside-pos">+24.3%</td><td class="upside-pos">+18%</td><td>26x</td></tr>
+            <tr><td><span class="badge badge-reduce">BEAR</span></td><td>25%</td><td style="font-weight:700">₹2,800</td><td class="upside-neg">-14.9%</td><td class="upside-pos">+6%</td><td>20x</td></tr>
+            <tr style="background:#f8fafc;font-weight:700"><td>Weighted</td><td>100%</td><td>₹3,985</td><td class="upside-pos">+21.1%</td><td class="upside-pos">+18%</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RESEARCH FIELDS ────────────────────────────────────────────────── -->
+  <div id="tab-fields" class="tab-content">
+    <div id="fieldsGrid"></div>
+  </div>
+
+  <!-- ── UNIVERSE ───────────────────────────────────────────────────────── -->
+  <div id="tab-universe" class="tab-content">
+    <div class="section">
+      <div class="section-header"><i class="fas fa-globe"></i> Research Universe</div>
+      <div class="section-body" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Company</th><th>Sector</th><th>Mkt Cap</th>
+              <th>Rating</th><th>Upside</th><th>3Y CAGR</th><th>Target</th><th>Conf</th>
+            </tr>
+          </thead>
+          <tbody id="universeTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+<script>
+// ── Mock Data ──────────────────────────────────────────────────────────────────
+const FIELDS = [
+  { name:"growth_drivers", cat:"STRATEGY", text:"1) Government infrastructure spend ₹10L Cr/year through FY28 under NIP. 2) Defence indigenisation — L&T is one of few companies with capacity to build nuclear submarines and MRSAM systems. 3) Data centre and green energy boom creating new construction opportunity. 4) International expansion: GCC LNG/refinery capex driven by energy security.", conf:0.92, period:"Q4FY26" },
+  { name:"margins", cat:"FUNDAMENTALS", text:"EBITDA margin at 12.1% in FY26 vs 10.8% in FY23 — 130 bps improvement over 3 years. Management guiding 13–14% by FY28. Drivers: higher-margin Defence and International mix, operating leverage from revenue scale, and procurement savings. Risk: steel inflation could hurt by 80–100 bps if commodity cycle turns.", conf:0.88, period:"Q4FY26" },
+  { name:"capex_plans", cat:"STRATEGY", text:"₹8,500 Cr capex over FY26–28: 60% into manufacturing capacity (Hazira heavy engineering, Coimbatore electronics), 25% into digital and IT infrastructure, 15% into overseas project execution capacity. Green energy capex: ₹2,000 Cr in electrolyzer/solar manufacturing for Green Hydrogen vertical.", conf:0.85, period:"FY26 Annual Report" },
+  { name:"order_book_commentary", cat:"STRATEGY", text:"Order book: ₹5,54,380 Cr as of Mar 2026 (2.3x TTM revenue). Q4FY26 inflows: ₹73,000 Cr (best ever quarter). International mix: 35% of backlog. Top sectors: Infrastructure (45%), Hydrocarbon (22%), Defence (15%), Buildings (12%). Management guidance: FY27 order inflows of ₹2.75L Cr (+10% YoY).", conf:0.95, period:"Q4FY26" },
+  { name:"guidance", cat:"STRATEGY", text:"FY27 guidance: Revenue growth 12–15%, EBITDA margin 12.5–13.0%, Order inflows ₹2.7–2.8L Cr. 3-year targets (FY28): Revenue ₹3.0L Cr, EBITDA margin 13.5%, Order book ₹6.5L Cr. Management expects Defence revenue to double to ₹35,000 Cr by FY28.", conf:0.90, period:"Q4FY26" },
+  { name:"debt_profile", cat:"FUNDAMENTALS", text:"Consolidated D/E: 1.1x (including project financing in subsidiaries). Holdco net cash positive ₹12,000 Cr. Project-level debt fully ring-fenced. Cost of debt: 7.2% avg. Debt maturity profile well-spread — no major refinancing risk. Reducing debt target: D/E <0.8x by FY28.", conf:0.83, period:"Q4FY26" },
+  { name:"promoters", cat:"GOVERNANCE", text:"No promoter group — L&T is professionally managed with no controlling shareholder. LIC is largest shareholder at 14.2%. FIIs hold 24.5%, DIIs 18.3%, Public 43%. This is actually a governance positive — no related-party risk, no promoter pledging.", conf:0.95, period:"FY26 Annual Report" },
+  { name:"pledging", cat:"GOVERNANCE", text:"ZERO pledging — no promoter group exists. All institutional. No pledging risk. ESG score: 'A' from MSCI.", conf:0.99, period:"FY26 Annual Report" },
+  { name:"export_exposure", cat:"MARKET", text:"International revenue: 35% of FY26 total (₹82,600 Cr). Key markets: UAE, Saudi Arabia, Qatar, Oman (GCC 60% of international), Africa 15%, Malaysia/SE Asia 12%, Europe 8%. Currency: Most GCC contracts denominated in USD/AED — natural hedge for INR appreciation. Export growth: +28% YoY in FY26.", conf:0.87, period:"Q4FY26" },
+  { name:"market_share", cat:"MARKET", text:"L&T holds ~25–30% share of India's large-scale infrastructure EPC market. In Defence, ~15% of domestic defence procurement budget goes to L&T. In hydrocarbon EPC, #1 in India and top-5 in GCC. Competitive moat: 50+ year relationships with PSU clients (NTPC, ONGC, MoD); impossible to replicate execution DNA in 5–10 years.", conf:0.80, period:"FY26 Annual Report" },
+  { name:"risks", cat:"RISK", text:["Government capex slowdown: politically risky since 60% revenue from government clients", "Commodity inflation: steel, cement surges can compress margins by 100–150 bps", "Middle East geopolitical escalation: 35% backlog from GCC at risk", "Key-man risk: MD SN Subrahmanyan's tenure ends 2027 — succession plan unclear", "Competition from Chinese EPC companies in Africa/SE Asia reducing margins"], conf:0.85, period:"Q4FY26" },
+  { name:"subsidiaries", cat:"GOVERNANCE", text:"Key subs: 1) LTIMindtree (67% stake, ₹1.5L Cr mcap) — IT services, major value unlock potential. 2) L&T Finance (52%) — NBFC, being exited over 3 years. 3) L&T Technology Services (74%) — Engineering R&D. 4) Ultratech Cement stake — being exited. Management target: Pure-play infrastructure by FY28 via stake monetisation.", conf:0.90, period:"FY26 Annual Report" },
+  { name:"competitive_moat", cat:"MARKET", text:"L&T's moat is its institutional execution capability — 50,000 engineers, proprietary project management systems, and 50+ year government relationships that no competitor can replicate in < decade. Only company able to execute nuclear projects, space hardware, and ₹20,000 Cr bridges simultaneously.", conf:0.88, period:"FY26 Annual Report" },
+  { name:"management_quality", cat:"GOVERNANCE", text:"MD SN Subrahmanyan: 35-year L&T veteran, engineered the hydrocarbon business into GCC leadership. Strong capital allocation track record — returned ₹45,000 Cr via dividends/buybacks in FY22–26. Criticism: slow on L&T Finance exit (announced FY22, still 52% held). Board: 12 members, 8 independent. CFO track record solid.", conf:0.75, period:"Management Interview" },
+];
+
+const UNIVERSE = [
+  { isin:"INE018A01030", name:"Larsen & Toubro", sym:"LT", sector:"Eng & Cap Goods", mcap:"3.62L Cr", rating:"BUY", upside:24.3, cagr:18.4, target:"₹4,090", conf:78 },
+  { isin:"INE002A01018", name:"Reliance Industries", sym:"RELIANCE", sector:"Conglomerate", mcap:"19.8L Cr", rating:"ACCUMULATE", upside:12.1, cagr:11.5, target:"₹3,180", conf:85 },
+  { isin:"INE009A01021", name:"Infosys", sym:"INFY", sector:"IT Services", mcap:"6.2L Cr", rating:"HOLD", upside:6.4, cagr:9.2, target:"₹1,650", conf:82 },
+  { isin:"INE030A01027", name:"Tata Consultancy Svcs", sym:"TCS", sector:"IT Services", mcap:"14.1L Cr", rating:"HOLD", upside:4.8, cagr:8.5, target:"₹4,020", conf:88 },
+  { isin:"INE040A01034", name:"HDFC Bank", sym:"HDFCBANK", sector:"Banking", mcap:"12.3L Cr", rating:"BUY", upside:19.7, cagr:15.8, target:"₹2,010", conf:80 },
+  { isin:"INE066A01021", name:"Sun Pharmaceutical", sym:"SUNPHARMA", sector:"Pharma", mcap:"4.1L Cr", rating:"ACCUMULATE", upside:14.2, cagr:13.1, target:"₹1,890", conf:71 },
+  { isin:"INE101A01026", name:"Bharti Airtel", sym:"BHARTIARTL", sector:"Telecom", mcap:"9.8L Cr", rating:"BUY", upside:22.8, cagr:17.6, target:"₹1,870", conf:76 },
+  { isin:"INE121A01024", name:"ITC Limited", sym:"ITC", sector:"FMCG", mcap:"5.3L Cr", rating:"HOLD", upside:8.9, cagr:10.2, target:"₹475", conf:79 },
+  { isin:"INE154A01025", name:"Power Grid Corp", sym:"POWERGRID", sector:"Utilities", mcap:"2.8L Cr", rating:"BUY", upside:16.3, cagr:12.4, target:"₹380", conf:82 },
+  { isin:"INE176A01028", name:"Coal India", sym:"COALINDIA", sector:"Mining", mcap:"2.4L Cr", rating:"HOLD", upside:5.1, cagr:7.8, target:"₹410", conf:74 },
+];
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'universe') renderUniverse(UNIVERSE);
+  if (name === 'fields') renderFields(FIELDS);
+  if (name === 'scenarios') renderValuationChart();
+}
+
+// ── Research Fields ───────────────────────────────────────────────────────────
+function renderFields(fields) {
+  const cats = {};
+  fields.forEach(f => { (cats[f.cat] ||= []).push(f); });
+  const container = document.getElementById('fieldsGrid');
+  container.innerHTML = '';
+  Object.entries(cats).forEach(([cat, fs]) => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    const icons = { STRATEGY:'fa-chess', FUNDAMENTALS:'fa-chart-bar', MARKET:'fa-globe', RISK:'fa-shield-alt', GOVERNANCE:'fa-users' };
+    sec.innerHTML = `<div class="section-header"><i class="fas ${icons[cat]||'fa-tag'}"></i> ${cat}</div><div class="section-body" style="padding:12px">` +
+      fs.map(f => {
+        const label = f.name.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+        const text = Array.isArray(f.text) ? f.text.map(t=>`• ${t}`).join('\n') : f.text;
+        const confPct = Math.round(f.conf * 100);
+        const fill = f.conf >= .8 ? '#059669' : f.conf >= .6 ? '#d97706' : '#dc2626';
+        return `<div class="field-card">
+          <div class="field-name">${label}</div>
+          <div class="field-text">${text.replace(/\n/g,'<br>')}</div>
+          <div class="field-meta" style="display:flex;align-items:center;gap:8px">
+            <span>${confPct}% confidence</span>
+            <div class="conf-bar" style="flex:1"><div class="conf-fill" style="width:${confPct}%;background:${fill}"></div></div>
+            <span class="badge" style="background:#eff6ff;color:#3730a3">${f.period}</span>
+          </div></div>`;
+      }).join('') + '</div>';
+    container.appendChild(sec);
+  });
+}
+
+// ── Universe Table ────────────────────────────────────────────────────────────
+let allRows = [...UNIVERSE];
+function filterUniverse() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderUniverse(UNIVERSE.filter(r =>
+    r.name.toLowerCase().includes(q) || r.isin.toLowerCase().includes(q) || r.sym.toLowerCase().includes(q)
+  ));
+}
+function renderUniverse(rows) {
+  const RBADGE = { BUY:'badge-buy', ACCUMULATE:'badge-accumulate', HOLD:'badge-hold', REDUCE:'badge-reduce', STRONG_BUY:'badge-strong-buy', SELL:'badge-sell' };
+  document.getElementById('universeTable').innerHTML = rows.map((r,i) => `
+    <tr>
+      <td style="color:var(--muted);font-weight:600">#${i+1}</td>
+      <td><span class="company-link" onclick="alert('Research for ${r.name}')">${r.name}</span><br><small style="color:var(--muted)">${r.sym}</small></td>
+      <td style="color:var(--muted);font-size:12px">${r.sector}</td>
+      <td style="font-weight:600">${r.mcap}</td>
+      <td><span class="badge ${RBADGE[r.rating]||''}">${r.rating.replace('_',' ')}</span></td>
+      <td class="${r.upside>=0?'upside-pos':'upside-neg'}">${r.upside>0?'+':''}${r.upside.toFixed(1)}%</td>
+      <td style="font-weight:600">+${r.cagr.toFixed(1)}%</td>
+      <td style="font-weight:600">${r.target}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="conf-bar" style="width:48px"><div class="conf-fill" style="width:${r.conf}%;background:${r.conf>=70?'#059669':r.conf>=50?'#d97706':'#dc2626'}"></div></div>
+          <span style="font-size:11px;color:var(--muted)">${r.conf}</span>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+function renderMainCharts() {
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels: ['FY22','FY23','FY24','FY25','FY26'],
+      datasets: [{
+        label: 'Revenue (₹ Cr)',
+        data: [145000, 168000, 196000, 221000, 259000],
+        backgroundColor: '#818cf8', borderRadius: 6,
+      }]
+    },
+    options: { plugins:{ legend:{display:false}, title:{display:true,text:'Revenue (₹ Cr)',font:{size:12}} }, scales:{y:{ticks:{callback:v=>`₹${(v/1000).toFixed(0)}K`}}} }
+  });
+  new Chart(document.getElementById('marginChart'), {
+    type: 'line',
+    data: {
+      labels: ['FY22','FY23','FY24','FY25','FY26'],
+      datasets: [{
+        label: 'EBITDA Margin %',
+        data: [10.2, 10.8, 11.2, 11.6, 12.1],
+        borderColor: '#10b981', backgroundColor: '#d1fae5', fill: true, tension: 0.4, pointRadius: 4,
+      }]
+    },
+    options: { plugins:{ legend:{display:false}, title:{display:true,text:'EBITDA Margin (%)',font:{size:12}} }, scales:{y:{min:9,max:14,ticks:{callback:v=>`${v}%`}}} }
+  });
+}
+
+function renderValuationChart() {
+  const el = document.getElementById('valuationChart');
+  if (el._chart) el._chart.destroy();
+  el._chart = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['Bear (₹2,800)','Current (₹3,290)','Base Target (₹4,090)','Bull (₹5,200)'],
+      datasets: [{
+        data: [2800, 3290, 4090, 5200],
+        backgroundColor: ['#fca5a5','#94a3b8','#93c5fd','#6ee7b7'],
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend:{display:false} },
+      scales: { x:{ticks:{callback:v=>`₹${v}`}} }
+    }
+  });
+}
+
+// ── Trigger ───────────────────────────────────────────────────────────────────
+function triggerResearch() {
+  const btn = document.getElementById('triggerBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-sync-alt spinner"></i> Queued…';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Research';
+    alert('Research pipeline queued for L&T. Updated results will appear in ~5 minutes.');
+  }, 3000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderMainCharts();
+renderFields(FIELDS);
+renderUniverse(UNIVERSE);
+</script>
+</body>
+</html>

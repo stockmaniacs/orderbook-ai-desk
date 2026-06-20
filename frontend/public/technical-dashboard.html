@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technical AI Scanner — NSE/BSE Universe</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#111}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+
+/* Layout */
+.header{padding:20px 24px 16px;border-bottom:1px solid #1e293b;background:#050508}
+.header h1{font-size:20px;font-weight:700;color:#fff}
+.header p{font-size:12px;color:#64748b;margin-top:2px}
+.top-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 24px;background:#050508;border-bottom:1px solid #1e293b}
+.stat-chips{display:flex;gap:10px;flex-wrap:wrap}
+.stat-chip{text-align:center;padding:8px 16px;border-radius:10px;border:1px solid #1e293b;background:#111;min-width:90px;cursor:pointer}
+.stat-chip:hover{border-color:#334155}
+.stat-chip .val{font-size:22px;font-weight:700}
+.stat-chip .lbl{font-size:10px;color:#64748b;margin-top:2px}
+.regime-badge{font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid #334155}
+
+.tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid #1e293b;background:#050508}
+.tab{padding:10px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#64748b;transition:all .15s}
+.tab.active{color:#60a5fa;border-bottom-color:#3b82f6;background:#1e293b22}
+.tab:hover:not(.active){color:#94a3b8}
+
+.main{display:flex;gap:0;height:calc(100vh - 180px)}
+.content{flex:1;overflow-y:auto;padding:16px 24px}
+.sidebar{width:280px;border-left:1px solid #1e293b;overflow-y:auto;padding:16px;flex-shrink:0}
+
+/* Filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.filters input,.filters select{height:32px;padding:0 10px;background:#111;border:1px solid #1e293b;border-radius:8px;color:#e2e8f0;font-size:12px;outline:none}
+.filters input:focus,.filters select:focus{border-color:#3b82f6}
+.filters input{width:180px}
+.cls-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.cls-tab{padding:4px 10px;border-radius:20px;border:1px solid #1e293b;font-size:11px;cursor:pointer;color:#64748b;transition:all .15s}
+.cls-tab.active,.cls-tab:hover{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+.sort-row{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.sort-btn{padding:4px 10px;border-radius:8px;border:1px solid #1e293b;font-size:11px;cursor:pointer;color:#64748b;background:#111;transition:all .15s}
+.sort-btn.active{border-color:#6366f1;background:#1e1b4b;color:#a5b4fc}
+
+/* Table */
+.table-wrap{border-radius:12px;border:1px solid #1e293b;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:#0f172a;border-bottom:1px solid #1e293b}
+th{padding:9px 10px;text-align:left;font-size:10px;color:#475569;font-weight:600;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
+th:hover{color:#94a3b8}
+tbody tr{border-bottom:1px solid #0f172a;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#0f1a2e}
+td{padding:9px 10px;white-space:nowrap}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid transparent}
+.badge-EL{background:#2d1b69;border-color:#7c3aed44;color:#c4b5fd}
+.badge-SS{background:#1e3a5f;border-color:#2563eb44;color:#93c5fd}
+.badge-EM{background:#0e3a40;border-color:#0891b244;color:#67e8f9}
+.badge-CO{background:#14532d;border-color:#15803d44;color:#86efac}
+.badge-WL{background:#422006;border-color:#b4580644;color:#fcd34d}
+.badge-WS{background:#431407;border-color:#c2410c44;color:#fdba74}
+.badge-AV{background:#450a0a;border-color:#b91c1c44;color:#fca5a5}
+.sig-SB{background:#052e16;border-color:#16a34a44;color:#6ee7b7}
+.sig-BU{background:#052e16;border-color:#15803d44;color:#86efac}
+.sig-AC{background:#042f2e;border-color:#0d948844;color:#5eead4}
+.sig-HO{background:#1c1a00;border-color:#a16207;color:#fde047}
+.sig-RE{background:#1c0a00;border-color:#c2410c44;color:#fdba74}
+.sig-SE{background:#3b0000;border-color:#dc262644;color:#fca5a5}
+.sig-AV{background:#1a0000;border-color:#991b1b44;color:#f87171}
+
+/* Minervini bars */
+.mv-bars{display:flex;gap:2px}
+.mv-bar{width:6px;height:12px;border-radius:2px;background:#1e293b}
+.mv-bar.on{background:#10b981}
+
+/* Score bar */
+.sbar{display:flex;align-items:center;gap:6px}
+.sbar-track{height:5px;width:56px;background:#1e293b;border-radius:999px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:999px;transition:width .3s}
+
+/* Pattern badge */
+.pat{padding:2px 6px;border-radius:5px;font-size:9px;font-weight:700;background:#1e1b4b;border:1px solid #4f46e5;color:#a5b4fc}
+
+/* Sidebar widgets */
+.widget{border-radius:10px;border:1px solid #1e293b;background:#111;padding:14px;margin-bottom:12px}
+.widget h3{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.breadth-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+.b-cell .v{font-size:18px;font-weight:700}
+.b-cell .l{font-size:10px;color:#475569;margin-top:2px}
+.sector-row{display:flex;align-items:center;gap:6px;padding:4px 0}
+.sector-row .num{font-size:10px;color:#475569;width:14px;text-align:right}
+.sector-row .name{font-size:11px;color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sector-row .score{font-size:11px;font-weight:700;color:#a78bfa}
+.legend-row{display:flex;align-items:center;gap:6px;padding:3px 0}
+.legend-row .lbl{font-size:11px;color:#64748b}
+
+/* Tab panels */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Detail panel */
+.detail-panel{position:fixed;right:0;top:0;width:480px;height:100vh;background:#0c111a;border-left:1px solid #1e293b;z-index:100;overflow-y:auto;transform:translateX(100%);transition:transform .25s ease;padding:20px}
+.detail-panel.open{transform:translateX(0)}
+.panel-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:6px;background:#1e293b;border:none;color:#94a3b8;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.panel-close:hover{background:#334155;color:#fff}
+.panel-section{margin-top:16px;padding-top:16px;border-top:1px solid #1e293b}
+.panel-section h4{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.level-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #0f172a}
+.level-row:last-child{border-bottom:none}
+.level-row .k{font-size:11px;color:#64748b}
+.level-row .v{font-size:12px;font-weight:600;font-family:monospace}
+
+/* Charts grid */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-card{border-radius:12px;border:1px solid #1e293b;background:#111;padding:16px}
+.chart-card h3{font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:12px}
+
+/* Minervini grid */
+.mv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.mv-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid #1e293b;font-size:11px}
+.mv-item.pass{border-color:#10b98133;background:#052e16}
+.mv-item.fail{border-color:#dc262633;background:#1a0000}
+.mv-icon{font-size:14px;flex-shrink:0}
+.mv-text.pass{color:#6ee7b7}
+.mv-text.fail{color:#64748b}
+
+/* Signal history table */
+.sh-table{width:100%;border-collapse:collapse;font-size:11px}
+.sh-table th{padding:6px 8px;text-align:left;color:#475569;font-size:10px;border-bottom:1px solid #1e293b}
+.sh-table td{padding:6px 8px;border-bottom:1px solid #0f172a}
+.ret-pos{color:#10b981}
+.ret-neg{color:#ef4444}
+.oc-WIN{color:#6ee7b7;background:#052e16;border:1px solid #10b98140;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700}
+.oc-LOSS{color:#fca5a5;background:#3b0000;border:1px solid #dc262640;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700}
+.oc-OPEN{color:#93c5fd;background:#1e3a5f;border:1px solid #3b82f640;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700}
+.oc-NEUTRAL{color:#94a3b8;background:#1e293b;border:1px solid #33415540;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700}
+
+/* Pattern gallery */
+.pattern-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.pat-card{border-radius:10px;border:1px solid #1e293b;background:#111;padding:14px}
+.pat-card-type{font-size:10px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.05em}
+.pat-card-name{font-size:13px;font-weight:600;color:#e2e8f0;margin:4px 0}
+.pat-card-sym{font-size:11px;color:#64748b}
+.pat-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.pat-card-stat .k{font-size:10px;color:#475569}
+.pat-card-stat .v{font-size:12px;font-weight:600;font-family:monospace}
+.quality-bar{height:4px;background:#1e293b;border-radius:999px;margin-top:6px;overflow:hidden}
+.quality-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);border-radius:999px}
+
+/* Breadth tab */
+.breadth-full{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.ma-gauge{text-align:center;padding:20px;border-radius:12px;border:1px solid #1e293b;background:#111}
+.ma-gauge .val{font-size:36px;font-weight:800}
+.ma-gauge .sub{font-size:11px;color:#64748b;margin-top:4px}
+
+/* Overlap */
+.overlay{position:fixed;inset:0;background:#00000066;z-index:99;display:none}
+.overlay.open{display:block}
+</style>
+</head>
+<body>
+
+<!-- ── Overlay ── -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <h1>⚡ Technical AI Scanner</h1>
+      <p>NSE/BSE Universe · Minervini · Stage Analysis · IBD RS Rating · Breakout Detection</p>
+    </div>
+    <div id="regimeBadge" class="regime-badge"></div>
+  </div>
+</div>
+
+<!-- ── Stat Chips ── -->
+<div class="top-bar">
+  <div class="stat-chips">
+    <div class="stat-chip" onclick="filterClass('ELITE_LEADER')">
+      <div class="val" id="cnt-el" style="color:#c4b5fd">0</div>
+      <div class="lbl">Elite Leaders</div>
+    </div>
+    <div class="stat-chip" onclick="filterClass('STRONG_STRUCTURE')">
+      <div class="val" id="cnt-ss" style="color:#93c5fd">0</div>
+      <div class="lbl">Strong Structure</div>
+    </div>
+    <div class="stat-chip" onclick="filterClass('EMERGING_LEADER')">
+      <div class="val" id="cnt-em" style="color:#67e8f9">0</div>
+      <div class="lbl">Emerging Leaders</div>
+    </div>
+    <div class="stat-chip" onclick="filterClass('')">
+      <div class="val" id="cnt-tot" style="color:#94a3b8">0</div>
+      <div class="lbl">Universe</div>
+    </div>
+    <div class="stat-chip">
+      <div class="val" id="cnt-alerts" style="color:#f87171">0</div>
+      <div class="lbl">Unread Alerts</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tabs ── -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('leaderboard',this)">Leaderboard</div>
+  <div class="tab" onclick="switchTab('patterns',this)">Pattern Gallery</div>
+  <div class="tab" onclick="switchTab('breadth',this)">Market Breadth</div>
+  <div class="tab" onclick="switchTab('analytics',this)">Analytics</div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+<div class="content">
+
+<!-- ══ LEADERBOARD TAB ══ -->
+<div class="tab-panel active" id="tab-leaderboard">
+  <div class="filters">
+    <input type="text" id="searchBox" placeholder="Search symbol / company…" oninput="applyFilters()">
+    <select id="sigFilter" onchange="applyFilters()">
+      <option value="">All Signals</option>
+      <option>STRONG_BUY</option><option>BUY</option><option>ACCUMULATION</option>
+      <option>HOLD</option><option>REDUCE</option><option>SELL</option>
+    </select>
+    <select id="stageFilter" onchange="applyFilters()">
+      <option value="">All Stages</option>
+      <option>1</option><option>2</option><option>3</option><option>4</option>
+    </select>
+    <label style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:4px;cursor:pointer">
+      <input type="checkbox" id="patFilter" onchange="applyFilters()"> Pattern only
+    </label>
+    <div class="cls-tabs" id="clsTabs">
+      <div class="cls-tab active" data-cls="" onclick="clickClsTab(this,'')">All</div>
+      <div class="cls-tab" data-cls="ELITE_LEADER" onclick="clickClsTab(this,'ELITE_LEADER')">Elite</div>
+      <div class="cls-tab" data-cls="STRONG_STRUCTURE" onclick="clickClsTab(this,'STRONG_STRUCTURE')">Strong</div>
+      <div class="cls-tab" data-cls="EMERGING_LEADER" onclick="clickClsTab(this,'EMERGING_LEADER')">Emerging</div>
+      <div class="cls-tab" data-cls="CONSTRUCTIVE" onclick="clickClsTab(this,'CONSTRUCTIVE')">Constructive</div>
+      <div class="cls-tab" data-cls="WATCHLIST" onclick="clickClsTab(this,'WATCHLIST')">Watchlist</div>
+    </div>
+    <div class="sort-row" id="sortRow">
+      <button class="sort-btn active" data-sort="conviction_score" onclick="sortBy('conviction_score',this)">Conviction</button>
+      <button class="sort-btn" data-sort="technical_score" onclick="sortBy('technical_score',this)">Tech</button>
+      <button class="sort-btn" data-sort="rs_rating" onclick="sortBy('rs_rating',this)">RS</button>
+      <button class="sort-btn" data-sort="market_leader_rank" onclick="sortBy('market_leader_rank',this)">Rank</button>
+      <button class="sort-btn" data-sort="expected_upside_pct" onclick="sortBy('expected_upside_pct',this)">Upside</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Symbol</th>
+          <th>Classification · Stage</th>
+          <th>Signal</th>
+          <th style="text-align:right">CMP</th>
+          <th style="text-align:right">Upside</th>
+          <th style="text-align:right">R/R</th>
+          <th>Tech Score</th>
+          <th>RS Rating</th>
+          <th>Minervini</th>
+          <th>Pattern</th>
+          <th style="text-align:right">Pos%</th>
+          <th style="text-align:right">Rank</th>
+        </tr>
+      </thead>
+      <tbody id="stockTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ PATTERN GALLERY TAB ══ -->
+<div class="tab-panel" id="tab-patterns">
+  <div class="filters" style="margin-bottom:16px">
+    <select id="patTypeFilter" onchange="buildPatternGallery()">
+      <option value="">All Patterns</option>
+      <option value="VCP">VCP</option>
+      <option value="CUP_HANDLE">Cup & Handle</option>
+      <option value="FLAT_BASE">Flat Base</option>
+      <option value="HIGH_TIGHT_FLAG">High Tight Flag</option>
+      <option value="DOUBLE_BOTTOM">Double Bottom</option>
+      <option value="ASCENDING_BASE">Ascending Base</option>
+      <option value="DARVAS_BOX">Darvas Box</option>
+      <option value="RANGE_CONTRACTION">NR7</option>
+    </select>
+    <select id="patStatusFilter" onchange="buildPatternGallery()">
+      <option value="">All Statuses</option>
+      <option>FORMING</option><option>COMPLETE</option><option>BREAKOUT</option>
+    </select>
+  </div>
+  <div class="pattern-gallery" id="patternGallery"></div>
+</div>
+
+<!-- ══ MARKET BREADTH TAB ══ -->
+<div class="tab-panel" id="tab-breadth">
+  <div class="breadth-full" style="margin-bottom:16px">
+    <div class="ma-gauge">
+      <div class="val" id="pct200" style="color:#818cf8">—</div>
+      <div class="sub">% Above 200 SMA</div>
+    </div>
+    <div class="ma-gauge">
+      <div class="val" id="pct150" style="color:#38bdf8">—</div>
+      <div class="sub">% Above 150 SMA</div>
+    </div>
+    <div class="ma-gauge">
+      <div class="val" id="pct50" style="color:#2dd4bf">—</div>
+      <div class="sub">% Above 50 SMA</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="chart-card">
+      <h3>% Above Key MAs (Historical)</h3>
+      <canvas id="maHistChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>New Highs vs New Lows</h3>
+      <canvas id="nhNlChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>Sector RS Rankings</h3>
+    <canvas id="sectorChart" height="120"></canvas>
+  </div>
+</div>
+
+<!-- ══ ANALYTICS TAB ══ -->
+<div class="tab-panel" id="tab-analytics">
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Signal Distribution</h3>
+      <canvas id="sigDoughnut" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Win Rate by Pattern</h3>
+      <canvas id="winRateChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Technical Score Distribution</h3>
+      <canvas id="scoreDistChart" height="220"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Classification Heatmap</h3>
+      <canvas id="classHeatChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Signal history table -->
+  <div class="chart-card" style="margin-top:16px">
+    <h3>Recent Signal History (Model Performance)</h3>
+    <table class="sh-table">
+      <thead>
+        <tr>
+          <th>Symbol</th><th>Date</th><th>Signal</th><th>Pattern</th>
+          <th>7d</th><th>30d</th><th>60d</th><th>90d</th><th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody id="shTable"></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /.content -->
+
+<!-- ── Right Sidebar ── -->
+<div class="sidebar">
+  <div class="widget">
+    <h3>Market Breadth</h3>
+    <div class="breadth-grid">
+      <div class="b-cell"><div class="v" id="sb-nh" style="color:#10b981">—</div><div class="l">New Highs</div></div>
+      <div class="b-cell"><div class="v" id="sb-nl" style="color:#ef4444">—</div><div class="l">New Lows</div></div>
+      <div class="b-cell"><div class="v" id="sb-nhnl" style="color:#94a3b8">—</div><div class="l">NH/NL</div></div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:#64748b;display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #1e293b">
+      <span>A/D: <span id="sb-ad" style="color:#94a3b8">—</span></span>
+      <span>Elite: <span id="sb-el" style="color:#a78bfa">—</span></span>
+      <span>Strong: <span id="sb-ss" style="color:#60a5fa">—</span></span>
+    </div>
+  </div>
+
+  <div class="widget">
+    <h3>Top Sectors</h3>
+    <div id="sectorList"></div>
+  </div>
+
+  <div class="widget">
+    <h3>Classification Guide</h3>
+    <div class="legend-row"><span class="badge badge-EL">EL</span><span class="lbl" style="margin-left:6px">Elite Leader (≥87)</span></div>
+    <div class="legend-row"><span class="badge badge-SS">SS</span><span class="lbl" style="margin-left:6px">Strong Structure (≥74)</span></div>
+    <div class="legend-row"><span class="badge badge-EM">EM</span><span class="lbl" style="margin-left:6px">Emerging Leader (≥62)</span></div>
+    <div class="legend-row"><span class="badge badge-CO">CO</span><span class="lbl" style="margin-left:6px">Constructive (≥52)</span></div>
+    <div class="legend-row"><span class="badge badge-WL">WL</span><span class="lbl" style="margin-left:6px">Watchlist (≥40)</span></div>
+    <div class="legend-row"><span class="badge badge-WS">WS</span><span class="lbl" style="margin-left:6px">Weak Structure (≥28)</span></div>
+    <div class="legend-row"><span class="badge badge-AV">AV</span><span class="lbl" style="margin-left:6px">Avoid (&lt;28)</span></div>
+  </div>
+</div>
+
+</div><!-- /.main -->
+
+<!-- ── Detail Panel ── -->
+<div class="detail-panel" id="detailPanel">
+  <button class="panel-close" onclick="closePanel()">✕</button>
+  <div id="detailContent"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// MOCK DATA
+// ════════════════════════════════════════════════════════════════════════
+
+const UNIVERSE = [
+  {isin:"INE101A01026",sym:"LTIM",name:"LTIMindtree",sector:"IT",industry:"IT Services",mcap:"LargeCap",
+   cls:"ELITE_LEADER",sig:"STRONG_BUY",stage:2,mv:8,pattern:"VCP",
+   ts:91,conv:89,rs:88,trend:92,mom:87,vol:85,pat:90,
+   cmp:5240,target:6800,stop:4700,entry:5350,piv:5420,
+   upside:29.8,rr:3.2,pos:5.5,maxAlloc:8,rank:3,secRank:1,
+   atr:142,atrPct:2.7,vol20:1.8,
+   sma50:4980,sma150:4620,sma200:4380,abv50:true,abv150:true,abv200:true,
+   hi52:5680,lo52:3820,fromHi:-7.7,
+   rsi:67,adx:34,macdHist:18.2,macdExp:true,volRatio:1.9,
+   rs1m:8.2,rs3m:14.1,rs6m:22.4,rs12m:38.6,rsTrend:"UP",rsBo:true,
+   minervini:[true,true,true,true,true,true,true,true]},
+
+  {isin:"INE090A01021",sym:"HDFCBANK",name:"HDFC Bank",sector:"Banking",industry:"Private Banks",mcap:"LargeCap",
+   cls:"STRONG_STRUCTURE",sig:"BUY",stage:2,mv:7,pattern:"FLAT_BASE",
+   ts:78,conv:74,rs:76,trend:81,mom:72,vol:74,pat:78,
+   cmp:1720,target:2100,stop:1580,entry:1750,piv:1780,
+   upside:22.1,rr:2.7,pos:4.2,maxAlloc:6,rank:8,secRank:2,
+   atr:38,atrPct:2.2,vol20:1.3,
+   sma50:1660,sma150:1590,sma200:1540,abv50:true,abv150:true,abv200:true,
+   hi52:1880,lo52:1360,fromHi:-8.5,
+   rsi:58,adx:27,macdHist:4.1,macdExp:true,volRatio:1.4,
+   rs1m:3.4,rs3m:8.2,rs6m:12.1,rs12m:18.7,rsTrend:"UP",rsBo:false,
+   minervini:[true,true,true,true,true,true,true,false]},
+
+  {isin:"INE168A01017",sym:"ABB",name:"ABB India",sector:"Industrials",industry:"Electrical Equipment",mcap:"LargeCap",
+   cls:"ELITE_LEADER",sig:"STRONG_BUY",stage:2,mv:8,pattern:"CUP_HANDLE",
+   ts:94,conv:92,rs:91,trend:95,mom:90,vol:88,pat:92,
+   cmp:7180,target:9500,stop:6320,entry:7350,piv:7420,
+   upside:32.3,rr:3.6,pos:6.0,maxAlloc:8,rank:1,secRank:1,
+   atr:198,atrPct:2.8,vol20:1.6,
+   sma50:6740,sma150:6210,sma200:5870,abv50:true,abv150:true,abv200:true,
+   hi52:8040,lo52:4920,fromHi:-10.7,
+   rsi:71,adx:38,macdHist:42.1,macdExp:true,volRatio:2.2,
+   rs1m:11.2,rs3m:18.4,rs6m:29.6,rs12m:52.1,rsTrend:"UP",rsBo:true,
+   minervini:[true,true,true,true,true,true,true,true]},
+
+  {isin:"INE235A01022",sym:"POLYCAB",name:"Polycab India",sector:"Industrials",industry:"Cables & Wires",mcap:"MidCap",
+   cls:"ELITE_LEADER",sig:"BUY",stage:2,mv:7,pattern:"VCP",
+   ts:88,conv:84,rs:86,trend:89,mom:85,vol:80,pat:88,
+   cmp:6120,target:8200,stop:5500,entry:6300,piv:6450,
+   upside:34.0,rr:3.4,pos:5.2,maxAlloc:8,rank:5,secRank:2,
+   atr:168,atrPct:2.7,vol20:1.5,
+   sma50:5840,sma150:5380,sma200:5020,abv50:true,abv150:true,abv200:true,
+   hi52:6820,lo52:3940,fromHi:-10.3,
+   rsi:64,adx:32,macdHist:28.4,macdExp:true,volRatio:1.7,
+   rs1m:9.1,rs3m:16.2,rs6m:26.8,rs12m:45.3,rsTrend:"UP",rsBo:true,
+   minervini:[true,true,true,true,true,true,true,false]},
+
+  {isin:"INE249Z01020",sym:"GPIL",name:"Godawari Power",sector:"Metals",industry:"Steel",mcap:"SmallCap",
+   cls:"EMERGING_LEADER",sig:"ACCUMULATION",stage:2,mv:6,pattern:"ASCENDING_BASE",
+   ts:71,conv:68,rs:74,trend:73,mom:70,vol:68,pat:75,
+   cmp:820,target:1080,stop:720,entry:845,piv:880,
+   upside:31.7,rr:2.6,pos:3.8,maxAlloc:5,rank:22,secRank:4,
+   atr:22,atrPct:2.7,vol20:1.3,
+   sma50:780,sma150:720,sma200:680,abv50:true,abv150:true,abv200:true,
+   hi52:960,lo52:540,fromHi:-14.6,
+   rsi:54,adx:24,macdHist:3.2,macdExp:false,volRatio:1.2,
+   rs1m:5.1,rs3m:11.4,rs6m:18.7,rs12m:32.1,rsTrend:"UP",rsBo:false,
+   minervini:[true,true,true,true,true,true,false,false]},
+
+  {isin:"INE208A01029",sym:"ASHOKLEY",name:"Ashok Leyland",sector:"Auto",industry:"Commercial Vehicles",mcap:"LargeCap",
+   cls:"CONSTRUCTIVE",sig:"HOLD",stage:2,mv:6,pattern:null,
+   ts:62,conv:58,rs:65,trend:64,mom:58,vol:60,pat:55,
+   cmp:228,target:285,stop:198,entry:234,piv:242,
+   upside:25.0,rr:1.9,pos:3.0,maxAlloc:3,rank:34,secRank:3,
+   atr:6.2,atrPct:2.7,vol20:1.1,
+   sma50:218,sma150:204,sma200:196,abv50:true,abv150:true,abv200:true,
+   hi52:268,lo52:164,fromHi:-14.9,
+   rsi:52,adx:21,macdHist:0.8,macdExp:false,volRatio:1.0,
+   rs1m:2.8,rs3m:6.1,rs6m:10.2,rs12m:16.4,rsTrend:"FLAT",rsBo:false,
+   minervini:[true,true,true,true,true,true,false,false]},
+
+  {isin:"INE476A01014",sym:"CANBK",name:"Canara Bank",sector:"Banking",industry:"PSU Banks",mcap:"MidCap",
+   cls:"WATCHLIST",sig:"HOLD",stage:1,mv:4,pattern:null,
+   ts:48,conv:42,rs:52,trend:44,mom:46,vol:50,pat:40,
+   cmp:102,target:128,stop:88,entry:105,piv:110,
+   upside:25.5,rr:1.7,pos:2.0,maxAlloc:2,rank:68,secRank:8,
+   atr:2.8,atrPct:2.7,vol20:0.9,
+   sma50:98,sma150:104,sma200:108,abv50:true,abv150:false,abv200:false,
+   hi52:142,lo52:84,fromHi:-28.2,
+   rsi:44,adx:18,macdHist:-0.4,macdExp:false,volRatio:0.8,
+   rs1m:-1.2,rs3m:-4.1,rs6m:-8.6,rs12m:-12.4,rsTrend:"DOWN",rsBo:false,
+   minervini:[true,false,false,false,true,true,false,false]},
+
+  {isin:"INE257A01026",sym:"BHEL",name:"BHEL",sector:"Industrials",industry:"Power Equipment",mcap:"LargeCap",
+   cls:"CONSTRUCTIVE",sig:"HOLD",stage:2,mv:5,pattern:"RANGE_CONTRACTION",
+   ts:56,conv:50,rs:58,trend:57,mom:52,vol:54,pat:65,
+   cmp:248,target:310,stop:218,entry:254,piv:265,
+   upside:25.0,rr:2.1,pos:3.2,maxAlloc:3,rank:42,secRank:5,
+   atr:7.2,atrPct:2.9,vol20:1.0,
+   sma50:240,sma150:224,sma200:212,abv50:true,abv150:true,abv200:true,
+   hi52:310,lo52:168,fromHi:-20.0,
+   rsi:48,adx:19,macdHist:-1.1,macdExp:false,volRatio:0.7,
+   rs1m:0.8,rs3m:2.1,rs6m:4.2,rs12m:8.6,rsTrend:"FLAT",rsBo:false,
+   minervini:[true,true,true,false,true,true,false,false]},
+
+  {isin:"INE976G01028",sym:"RBLBANK",name:"RBL Bank",sector:"Banking",industry:"Private Banks",mcap:"MidCap",
+   cls:"WEAK_STRUCTURE",sig:"REDUCE",stage:3,mv:2,pattern:null,
+   ts:34,conv:28,rs:38,trend:28,mom:36,vol:38,pat:30,
+   cmp:186,target:220,stop:160,entry:190,piv:198,
+   upside:18.3,rr:1.2,pos:0.0,maxAlloc:0,rank:112,secRank:14,
+   atr:5.8,atrPct:3.1,vol20:1.4,
+   sma50:192,sma150:208,sma200:214,abv50:false,abv150:false,abv200:false,
+   hi52:270,lo52:168,fromHi:-31.1,
+   rsi:38,adx:14,macdHist:-3.2,macdExp:false,volRatio:1.2,
+   rs1m:-6.4,rs3m:-14.2,rs6m:-22.8,rs12m:-36.4,rsTrend:"DOWN",rsBo:false,
+   minervini:[false,false,false,false,false,false,false,false]},
+
+  {isin:"INE259A01022",sym:"JYOTHYLAB",name:"Jyothy Labs",sector:"FMCG",industry:"Personal Products",mcap:"MidCap",
+   cls:"EMERGING_LEADER",sig:"BUY",stage:2,mv:7,pattern:"FLAT_BASE",
+   ts:74,conv:70,rs:72,trend:76,mom:68,vol:72,pat:78,
+   cmp:520,target:680,stop:462,entry:532,piv:545,
+   upside:30.8,rr:2.8,pos:4.0,maxAlloc:5,rank:18,secRank:2,
+   atr:14.2,atrPct:2.7,vol20:1.2,
+   sma50:496,sma150:462,sma200:438,abv50:true,abv150:true,abv200:true,
+   hi52:580,lo52:368,fromHi:-10.3,
+   rsi:61,adx:28,macdHist:4.8,macdExp:true,volRatio:1.3,
+   rs1m:6.2,rs3m:12.8,rs6m:21.4,rs12m:34.6,rsTrend:"UP",rsBo:false,
+   minervini:[true,true,true,true,true,true,true,false]},
+
+  {isin:"INE002A01018",sym:"RELIANCE",name:"Reliance Industries",sector:"O&G",industry:"Conglomerate",mcap:"LargeCap",
+   cls:"STRONG_STRUCTURE",sig:"ACCUMULATION",stage:2,mv:6,pattern:null,
+   ts:76,conv:72,rs:70,trend:78,mom:70,vol:74,pat:60,
+   cmp:2940,target:3600,stop:2680,entry:2980,piv:3020,
+   upside:22.4,rr:2.5,pos:4.5,maxAlloc:6,rank:10,secRank:1,
+   atr:76,atrPct:2.6,vol20:1.3,
+   sma50:2820,sma150:2680,sma200:2560,abv50:true,abv150:true,abv200:true,
+   hi52:3220,lo52:2220,fromHi:-8.7,
+   rsi:59,adx:26,macdHist:12.4,macdExp:false,volRatio:1.1,
+   rs1m:3.8,rs3m:7.2,rs6m:12.6,rs12m:20.4,rsTrend:"UP",rsBo:false,
+   minervini:[true,true,true,true,true,true,false,false]},
+
+  {isin:"INE849A01020",sym:"TRENT",name:"Trent",sector:"Retail",industry:"Fashion Retail",mcap:"LargeCap",
+   cls:"ELITE_LEADER",sig:"STRONG_BUY",stage:2,mv:8,pattern:"HIGH_TIGHT_FLAG",
+   ts:96,conv:94,rs:93,trend:97,mom:94,vol:90,pat:96,
+   cmp:6840,target:9800,stop:5960,entry:7000,piv:7120,
+   upside:43.3,rr:4.0,pos:7.2,maxAlloc:8,rank:2,secRank:1,
+   atr:188,atrPct:2.7,vol20:2.1,
+   sma50:6380,sma150:5820,sma200:5180,abv50:true,abv150:true,abv200:true,
+   hi52:7420,lo52:3960,fromHi:-7.8,
+   rsi:74,adx:42,macdHist:68.4,macdExp:true,volRatio:2.6,
+   rs1m:14.2,rs3m:24.8,rs6m:42.6,rs12m:72.1,rsTrend:"UP",rsBo:true,
+   minervini:[true,true,true,true,true,true,true,true]},
+
+  {isin:"INE692A01016",sym:"UNIONBANK",name:"Union Bank",sector:"Banking",industry:"PSU Banks",mcap:"MidCap",
+   cls:"WATCHLIST",sig:"HOLD",stage:1,mv:3,pattern:null,
+   ts:44,conv:38,rs:46,trend:40,mom:42,vol:46,pat:35,
+   cmp:128,target:160,stop:108,entry:132,piv:138,
+   upside:25.0,rr:1.6,pos:1.5,maxAlloc:2,rank:82,secRank:11,
+   atr:3.6,atrPct:2.8,vol20:0.8,
+   sma50:124,sma150:130,sma200:136,abv50:true,abv150:false,abv200:false,
+   hi52:172,lo52:108,fromHi:-25.6,
+   rsi:42,adx:16,macdHist:-1.4,macdExp:false,volRatio:0.7,
+   rs1m:-2.4,rs3m:-6.8,rs6m:-11.4,rs12m:-18.2,rsTrend:"DOWN",rsBo:false,
+   minervini:[true,false,false,false,true,true,false,false]},
+
+  {isin:"INE030A01027",sym:"HINDUNILVR",name:"Hindustan Unilever",sector:"FMCG",industry:"FMCG",mcap:"LargeCap",
+   cls:"CONSTRUCTIVE",sig:"HOLD",stage:2,mv:5,pattern:null,
+   ts:58,conv:52,rs:56,trend:60,mom:52,vol:56,pat:50,
+   cmp:2340,target:2800,stop:2100,entry:2380,piv:2420,
+   upside:19.7,rr:1.9,pos:3.0,maxAlloc:3,rank:38,secRank:1,
+   atr:58,atrPct:2.5,vol20:1.0,
+   sma50:2280,sma150:2180,sma200:2100,abv50:true,abv150:true,abv200:true,
+   hi52:2680,lo52:2020,fromHi:-12.7,
+   rsi:51,adx:20,macdHist:2.1,macdExp:false,volRatio:0.9,
+   rs1m:1.4,rs3m:3.2,rs6m:5.8,rs12m:10.4,rsTrend:"FLAT",rsBo:false,
+   minervini:[true,true,true,false,true,true,false,false]},
+
+  {isin:"INE349A01021",sym:"KAJARIACER",name:"Kajaria Ceramics",sector:"Consumer Durables",industry:"Tiles",mcap:"MidCap",
+   cls:"EMERGING_LEADER",sig:"ACCUMULATION",stage:2,mv:6,pattern:"DOUBLE_BOTTOM",
+   ts:68,conv:62,rs:70,trend:69,mom:64,vol:66,pat:72,
+   cmp:1280,target:1680,stop:1140,entry:1310,piv:1340,
+   upside:31.3,rr:2.9,pos:3.6,maxAlloc:5,rank:26,secRank:2,
+   atr:36,atrPct:2.8,vol20:1.1,
+   sma50:1220,sma150:1140,sma200:1080,abv50:true,abv150:true,abv200:true,
+   hi52:1460,lo52:920,fromHi:-12.3,
+   rsi:57,adx:23,macdHist:5.6,macdExp:true,volRatio:1.2,
+   rs1m:4.8,rs3m:10.2,rs6m:17.6,rs12m:28.4,rsTrend:"UP",rsBo:false,
+   minervini:[true,true,true,true,true,true,false,false]},
+];
+
+const BREADTH = {
+  date:"2025-06-01",total:850,
+  pct200:58.4,pct150:62.1,pct50:67.8,
+  newHighs:84,newLows:22,nhNl:3.8,
+  advances:512,declines:278,unchanged:60,adRatio:1.84,
+  eliteCount:48,strongCount:112,
+  regime:"BULL_CONFIRMED",
+  sectors:[
+    {name:"IT Services",score:88},
+    {name:"Industrials",score:84},
+    {name:"Retail",score:82},
+    {name:"Cables & Wires",score:79},
+    {name:"Consumer Durables",score:72},
+    {name:"Pharma",score:68},
+    {name:"Private Banks",score:65},
+    {name:"Auto",score:60},
+    {name:"FMCG",score:54},
+    {name:"PSU Banks",score:38},
+  ],
+  maHistory:[
+    {d:"Jan",p50:54,p150:49,p200:44},
+    {d:"Feb",p50:58,p150:52,p200:47},
+    {d:"Mar",p50:61,p150:55,p200:50},
+    {d:"Apr",p50:65,p150:59,p200:54},
+    {d:"May",p50:67,p150:62,p200:58},
+    {d:"Jun",p50:68,p150:62,p200:58},
+  ],
+  nhNlHistory:[
+    {d:"Jan",nh:42,nl:48},{d:"Feb",nh:56,nl:38},{d:"Mar",nh:64,nl:32},
+    {d:"Apr",nh:72,nl:28},{d:"May",nh:80,nl:24},{d:"Jun",nh:84,nl:22},
+  ],
+};
+
+const PATTERNS_DATA = [
+  {sym:"ABB",   name:"ABB India",   type:"CUP_HANDLE",   status:"COMPLETE",date:"2025-05-08",depth:14.2,dur:34,piv:7420,blo:7380,bhi:7500,stop:6680,tgt:9500,quality:88},
+  {sym:"LTIM",  name:"LTIMindtree", type:"VCP",          status:"FORMING", date:"2025-05-18",depth:11.4,dur:22,piv:5420,blo:5380,bhi:5480,stop:4920,tgt:6800,quality:82,contractions:3},
+  {sym:"TRENT", name:"Trent",       type:"HIGH_TIGHT_FLAG",status:"BREAKOUT",date:"2025-05-02",depth:8.6,dur:12,piv:7120,blo:7000,bhi:7200,stop:5960,tgt:9800,quality:94},
+  {sym:"POLYCAB",name:"Polycab",    type:"VCP",          status:"FORMING", date:"2025-05-22",depth:9.8,dur:18,piv:6450,blo:6380,bhi:6520,stop:5760,tgt:8200,quality:80,contractions:3},
+  {sym:"JYOTHY",name:"Jyothy Labs", type:"FLAT_BASE",    status:"COMPLETE",date:"2025-04-28",depth:7.2,dur:28,piv:545,blo:535,bhi:560,stop:490,tgt:680,quality:74},
+  {sym:"KAJARIA",name:"Kajaria",    type:"DOUBLE_BOTTOM",status:"FORMING", date:"2025-05-12",depth:12.6,dur:30,piv:1340,blo:1300,bhi:1360,stop:1120,tgt:1680,quality:70},
+  {sym:"BHEL",  name:"BHEL",        type:"RANGE_CONTRACTION",status:"FORMING",date:"2025-05-28",depth:5.4,dur:7,piv:265,blo:258,bhi:272,stop:238,tgt:310,quality:62},
+  {sym:"HDFCBANK",name:"HDFC Bank", type:"FLAT_BASE",    status:"COMPLETE",date:"2025-05-10",depth:6.8,dur:24,piv:1780,blo:1750,bhi:1800,stop:1600,tgt:2100,quality:76},
+];
+
+const SIGNAL_HISTORY = [
+  {sym:"TRENT",  date:"2025-04-01",sig:"STRONG_BUY",cls:"ELITE_LEADER",  pat:"HIGH_TIGHT_FLAG",ts:94,rs:92,price:6120,tgt:8800,stop:5340,rr:3.9,r7:4.2,r30:11.8,r60:28.4,outcome:"WIN"},
+  {sym:"ABB",    date:"2025-03-15",sig:"STRONG_BUY",cls:"ELITE_LEADER",  pat:"CUP_HANDLE",     ts:90,rs:88,price:6480,tgt:8900,stop:5700,rr:3.5,r7:3.1,r30:8.4,r60:18.6,outcome:"WIN"},
+  {sym:"LTIM",   date:"2025-03-28",sig:"BUY",       cls:"ELITE_LEADER",  pat:"VCP",            ts:88,rs:85,price:4860,tgt:6400,stop:4380,rr:3.2,r7:2.8,r30:7.8,r60:null,outcome:"OPEN"},
+  {sym:"POLYCAB",date:"2025-04-10",sig:"BUY",       cls:"ELITE_LEADER",  pat:"VCP",            ts:85,rs:84,price:5680,tgt:7800,stop:5100,rr:3.7,r7:1.9,r30:6.2,r60:null,outcome:"OPEN"},
+  {sym:"RBLBANK",date:"2025-02-14",sig:"REDUCE",    cls:"WEAK_STRUCTURE",pat:null,             ts:38,rs:42,price:220,tgt:260,stop:190,rr:1.3,r7:-3.2,r30:-8.6,r60:-18.4,outcome:"LOSS"},
+  {sym:"JYOTHY", date:"2025-04-20",sig:"ACCUMULATION",cls:"EMERGING_LEADER",pat:"FLAT_BASE",  ts:72,rs:70,price:482,tgt:640,stop:428,rr:2.9,r7:1.4,r30:5.6,r60:null,outcome:"OPEN"},
+  {sym:"HDFCBANK",date:"2025-03-05",sig:"BUY",      cls:"STRONG_STRUCTURE",pat:"FLAT_BASE",   ts:76,rs:74,price:1624,tgt:2000,stop:1480,rr:2.6,r7:0.8,r30:4.2,r60:8.1,outcome:"WIN"},
+];
+
+// ════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════
+let currentCls = "";
+let currentSort = "conviction_score";
+let activeTab = "leaderboard";
+let charts = {};
+
+// ════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════
+const fmt = (n, d=1) => n == null ? "—" : Number(n).toFixed(d);
+const inr  = n => n == null ? "—" : "₹" + Number(n).toLocaleString("en-IN",{maximumFractionDigits:0});
+const pct  = n => n == null ? "—" : (n>0?"+":"")+Number(n).toFixed(1)+"%";
+
+const CLS_BADGE = {
+  ELITE_LEADER:"badge-EL",STRONG_STRUCTURE:"badge-SS",EMERGING_LEADER:"badge-EM",
+  CONSTRUCTIVE:"badge-CO",WATCHLIST:"badge-WL",WEAK_STRUCTURE:"badge-WS",AVOID:"badge-AV",
+};
+const CLS_SHORT = {
+  ELITE_LEADER:"Elite",STRONG_STRUCTURE:"Strong",EMERGING_LEADER:"Emerg",
+  CONSTRUCTIVE:"Const",WATCHLIST:"Watch",WEAK_STRUCTURE:"Weak",AVOID:"Avoid",
+};
+const SIG_CLASS = {
+  STRONG_BUY:"sig-SB",BUY:"sig-BU",ACCUMULATION:"sig-AC",HOLD:"sig-HO",
+  REDUCE:"sig-RE",SELL:"sig-SE",AVOID:"sig-AV",
+};
+const SIG_LABEL = {
+  STRONG_BUY:"Strong Buy",BUY:"Buy",ACCUMULATION:"Accumulate",HOLD:"Hold",
+  REDUCE:"Reduce",SELL:"Sell",AVOID:"Avoid",
+};
+const PATTERN_LABELS = {
+  VCP:"VCP",CUP_HANDLE:"C&H",FLAT_BASE:"Flat",DOUBLE_BOTTOM:"2B",
+  ASCENDING_BASE:"Asc",HIGH_TIGHT_FLAG:"HTF",DARVAS_BOX:"Drvs",RANGE_CONTRACTION:"NR7",
+};
+const PATTERN_FULL = {
+  VCP:"Volatility Contraction Pattern",CUP_HANDLE:"Cup & Handle",FLAT_BASE:"Flat Base",
+  DOUBLE_BOTTOM:"Double Bottom",ASCENDING_BASE:"Ascending Base",HIGH_TIGHT_FLAG:"High Tight Flag",
+  DARVAS_BOX:"Darvas Box",RANGE_CONTRACTION:"Range Contraction (NR7)",
+};
+const MINERVINI_LABELS = [
+  "Price > 200 SMA","200 SMA trending up ≥1 month","150 SMA > 200 SMA",
+  "50 SMA > 150 SMA & 200 SMA","Price > 50 SMA","Price ≥25% above 52w low",
+  "Price within 25% of 52w high","RS Rating ≥70",
+];
+const STATUS_CL = {FORMING:"#60a5fa",COMPLETE:"#a78bfa",BREAKOUT:"#10b981",FAILED:"#ef4444",INVALIDATED:"#475569"};
+const REGIME_LABELS = {
+  BULL_CONFIRMED:"Bull Confirmed",BULL_UNDER_PRESSURE:"Bull Under Pressure",
+  UPTREND_RESUMING:"Uptrend Resuming",SIDEWAYS:"Sideways",
+  DOWNTREND:"Downtrend",BEAR_CONFIRMED:"Bear Confirmed",
+};
+const REGIME_COLORS = {
+  BULL_CONFIRMED:"#10b981",BULL_UNDER_PRESSURE:"#fbbf24",UPTREND_RESUMING:"#2dd4bf",
+  SIDEWAYS:"#94a3b8",DOWNTREND:"#f97316",BEAR_CONFIRMED:"#ef4444",
+};
+
+function scoreColor(v) {
+  if (v >= 80) return "#a78bfa";
+  if (v >= 65) return "#60a5fa";
+  if (v >= 50) return "#2dd4bf";
+  if (v >= 35) return "#fbbf24";
+  return "#ef4444";
+}
+
+function sbarHtml(val, max=100) {
+  const pct = Math.min(100,((val||0)/max)*100);
+  const c = scoreColor(val);
+  return `<div class="sbar"><div class="sbar-track"><div class="sbar-fill" style="width:${pct}%;background:${c}"></div></div><span style="font-size:11px;color:#94a3b8;width:22px;text-align:right">${val!=null?Math.round(val):"—"}</span></div>`;
+}
+
+function mvBarsHtml(count) {
+  let h = '<div class="mv-bars">';
+  for (let i=0;i<8;i++) h += `<div class="mv-bar${i<count?" on":""}"></div>`;
+  return h + '</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════════
+function init() {
+  updateTopStats();
+  updateSidebar();
+  renderTable();
+  buildPatternGallery();
+  buildBreadthCharts();
+  buildAnalyticsCharts();
+  buildSignalHistoryTable();
+}
+
+function updateTopStats() {
+  document.getElementById("cnt-el").textContent  = UNIVERSE.filter(s=>s.cls==="ELITE_LEADER").length;
+  document.getElementById("cnt-ss").textContent  = UNIVERSE.filter(s=>s.cls==="STRONG_STRUCTURE").length;
+  document.getElementById("cnt-em").textContent  = UNIVERSE.filter(s=>s.cls==="EMERGING_LEADER").length;
+  document.getElementById("cnt-tot").textContent = UNIVERSE.length;
+  document.getElementById("cnt-alerts").textContent = 5; // mock
+
+  const rc = REGIME_COLORS[BREADTH.regime] || "#94a3b8";
+  const rl = REGIME_LABELS[BREADTH.regime] || BREADTH.regime;
+  const rb = document.getElementById("regimeBadge");
+  rb.textContent = rl;
+  rb.style.color = rc;
+  rb.style.borderColor = rc + "44";
+  rb.style.background = rc + "11";
+}
+
+function updateSidebar() {
+  document.getElementById("sb-nh").textContent   = BREADTH.newHighs;
+  document.getElementById("sb-nl").textContent   = BREADTH.newLows;
+  document.getElementById("sb-nhnl").textContent = fmt(BREADTH.nhNl,1);
+  document.getElementById("sb-ad").textContent   = fmt(BREADTH.adRatio,2);
+  document.getElementById("sb-el").textContent   = BREADTH.eliteCount;
+  document.getElementById("sb-ss").textContent   = BREADTH.strongCount;
+
+  const sl = document.getElementById("sectorList");
+  sl.innerHTML = BREADTH.sectors.map((s,i)=>`
+    <div class="sector-row">
+      <span class="num">${i+1}</span>
+      <span class="name">${s.name}</span>
+      <span class="score">${s.score}</span>
+    </div>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// LEADERBOARD
+// ════════════════════════════════════════════════════════════════════════
+function filterClass(cls) {
+  currentCls = cls;
+  document.querySelectorAll(".cls-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.cls === cls);
+  });
+  renderTable();
+}
+
+function clickClsTab(el, cls) {
+  document.querySelectorAll(".cls-tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  currentCls = cls;
+  renderTable();
+}
+
+function applyFilters() { renderTable(); }
+
+function sortBy(key, btn) {
+  currentSort = key;
+  document.querySelectorAll(".sort-btn").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById("searchBox").value.toLowerCase();
+  const sig    = document.getElementById("sigFilter").value;
+  const stage  = document.getElementById("stageFilter").value;
+  const patO   = document.getElementById("patFilter").checked;
+
+  let data = UNIVERSE.filter(s => {
+    if (currentCls && s.cls !== currentCls) return false;
+    if (sig && s.sig !== sig) return false;
+    if (stage && String(s.stage) !== stage) return false;
+    if (patO && !s.pattern) return false;
+    if (search && !s.sym.toLowerCase().includes(search) && !s.name.toLowerCase().includes(search) && !s.sector.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (currentSort === "market_leader_rank") {
+    data.sort((a,b) => (a.rank||999) - (b.rank||999));
+  } else {
+    data.sort((a,b) => (b[currentSort.replace("expected_upside_pct","upside").replace("technical_score","ts").replace("conviction_score","conv").replace("rs_rating","rs")]||0) - (a[currentSort.replace("expected_upside_pct","upside").replace("technical_score","ts").replace("conviction_score","conv").replace("rs_rating","rs")]||0));
+  }
+
+  const tb = document.getElementById("stockTable");
+  if (!data.length) {
+    tb.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:30px;color:#475569">No stocks match filters</td></tr>';
+    return;
+  }
+  tb.innerHTML = data.map((s,i) => {
+    const upColor = s.upside > 0 ? "#10b981" : "#ef4444";
+    const rrColor = s.rr >= 3 ? "#10b981" : s.rr >= 2 ? "#fbbf24" : "#ef4444";
+    return `<tr onclick="openDetail('${s.isin}')">
+      <td style="color:#475569">${i+1}</td>
+      <td>
+        <div style="font-weight:600;color:#fff">${s.sym}</div>
+        <div style="font-size:10px;color:#475569">${s.sector}</div>
+      </td>
+      <td>
+        <span class="badge ${CLS_BADGE[s.cls]||''}">${CLS_SHORT[s.cls]||s.cls}</span>
+        ${s.stage!=null?`<span style="font-size:10px;font-weight:700;margin-left:4px;color:${s.stage===2?"#10b981":s.stage===1?"#64748b":s.stage===3?"#fbbf24":"#ef4444"}">S${s.stage}</span>`:""}
+      </td>
+      <td><span class="badge ${SIG_CLASS[s.sig]||''}">${SIG_LABEL[s.sig]||s.sig}</span></td>
+      <td style="text-align:right;font-family:monospace;color:#e2e8f0">${inr(s.cmp)}</td>
+      <td style="text-align:right;font-weight:600;color:${upColor}">${pct(s.upside)}</td>
+      <td style="text-align:right;font-weight:600;color:${rrColor};font-family:monospace">${fmt(s.rr,1)}x</td>
+      <td>${sbarHtml(s.ts)}</td>
+      <td>${sbarHtml(s.rs,99)}</td>
+      <td>${mvBarsHtml(s.mv)}</td>
+      <td>${s.pattern?`<span class="pat">${PATTERN_LABELS[s.pattern]||s.pattern}</span>`:"<span style='color:#1e293b'>—</span>"}</td>
+      <td style="text-align:right;color:#94a3b8">${fmt(s.pos)}%</td>
+      <td style="text-align:right;color:#64748b">#${s.rank}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// PATTERN GALLERY
+// ════════════════════════════════════════════════════════════════════════
+function buildPatternGallery() {
+  const ptf = document.getElementById("patTypeFilter").value;
+  const psf = document.getElementById("patStatusFilter").value;
+  const data = PATTERNS_DATA.filter(p => (!ptf || p.type===ptf) && (!psf || p.status===psf));
+
+  const sc = (s) => STATUS_CL[s] || "#475569";
+  document.getElementById("patternGallery").innerHTML = data.length
+    ? data.map(p => `
+      <div class="pat-card">
+        <div class="pat-card-type">${PATTERN_FULL[p.type]||p.type}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <div>
+            <div class="pat-card-name">${p.sym}</div>
+            <div class="pat-card-sym">${p.name}</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;border:1px solid ${sc(p.status)}22;background:${sc(p.status)}11;color:${sc(p.status)}">${p.status}</span>
+        </div>
+        <div class="quality-bar"><div class="quality-fill" style="width:${p.quality}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#475569;margin-top:4px">
+          <span>Quality</span><span style="color:#a78bfa;font-weight:700">${p.quality}/100</span>
+        </div>
+        <div class="pat-card-body">
+          <div class="pat-card-stat"><div class="k">Pivot</div><div class="v" style="color:#a78bfa">${inr(p.piv)}</div></div>
+          <div class="pat-card-stat"><div class="k">Depth</div><div class="v">${fmt(p.depth)}%</div></div>
+          <div class="pat-card-stat"><div class="k">Stop</div><div class="v" style="color:#ef4444">${inr(p.stop)}</div></div>
+          <div class="pat-card-stat"><div class="k">Target</div><div class="v" style="color:#10b981">${inr(p.tgt)}</div></div>
+          <div class="pat-card-stat"><div class="k">Buy Zone</div><div class="v" style="color:#2dd4bf">${inr(p.blo)}</div></div>
+          <div class="pat-card-stat"><div class="k">Duration</div><div class="v">${p.dur}d</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#475569">Detected: ${p.date}</div>
+      </div>`).join("")
+    : '<div style="color:#475569;padding:40px;text-align:center">No patterns match filters</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// BREADTH CHARTS
+// ════════════════════════════════════════════════════════════════════════
+function buildBreadthCharts() {
+  document.getElementById("pct200").textContent = BREADTH.pct200+"%";
+  document.getElementById("pct150").textContent = BREADTH.pct150+"%";
+  document.getElementById("pct50").textContent  = BREADTH.pct50+"%";
+
+  const cfg = {responsive:true,plugins:{legend:{labels:{color:"#64748b",font:{size:10}}},tooltip:{bodyColor:"#e2e8f0",titleColor:"#94a3b8"}},scales:{x:{ticks:{color:"#475569"},grid:{color:"#1e293b"}},y:{ticks:{color:"#475569"},grid:{color:"#1e293b"},min:0,max:100}}};
+
+  if(charts.maHist) charts.maHist.destroy();
+  charts.maHist = new Chart(document.getElementById("maHistChart"),{type:"line",data:{
+    labels:BREADTH.maHistory.map(m=>m.d),
+    datasets:[
+      {label:"Above 200",data:BREADTH.maHistory.map(m=>m.p200),borderColor:"#818cf8",tension:.4,pointRadius:3,fill:false},
+      {label:"Above 150",data:BREADTH.maHistory.map(m=>m.p150),borderColor:"#38bdf8",tension:.4,pointRadius:3,fill:false},
+      {label:"Above 50", data:BREADTH.maHistory.map(m=>m.p50), borderColor:"#2dd4bf",tension:.4,pointRadius:3,fill:false},
+    ]
+  },options:{...cfg,scales:{...cfg.scales,y:{...cfg.scales.y,max:100}}}});
+
+  if(charts.nhNl) charts.nhNl.destroy();
+  charts.nhNl = new Chart(document.getElementById("nhNlChart"),{type:"bar",data:{
+    labels:BREADTH.nhNlHistory.map(m=>m.d),
+    datasets:[
+      {label:"New Highs",data:BREADTH.nhNlHistory.map(m=>m.nh),backgroundColor:"#10b98166"},
+      {label:"New Lows", data:BREADTH.nhNlHistory.map(m=>m.nl),backgroundColor:"#ef444466"},
+    ]
+  },options:{...cfg,scales:{x:{ticks:{color:"#475569"},grid:{color:"#1e293b"}},y:{ticks:{color:"#475569"},grid:{color:"#1e293b"}}}}});
+
+  if(charts.sector) charts.sector.destroy();
+  charts.sector = new Chart(document.getElementById("sectorChart"),{type:"bar",
+    data:{
+      labels:BREADTH.sectors.map(s=>s.name),
+      datasets:[{label:"RS Score",data:BREADTH.sectors.map(s=>s.score),
+        backgroundColor:BREADTH.sectors.map(s=>s.score>=75?"#a78bfa88":s.score>=60?"#60a5fa88":"#475569aa"),
+        borderRadius:4}]
+    },
+    options:{indexAxis:"y",responsive:true,
+      plugins:{legend:{display:false},tooltip:{bodyColor:"#e2e8f0"}},
+      scales:{x:{ticks:{color:"#475569"},grid:{color:"#1e293b"},min:0,max:100},
+              y:{ticks:{color:"#94a3b8",font:{size:11}},grid:{color:"#1e293b"}}}}
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ANALYTICS CHARTS
+// ════════════════════════════════════════════════════════════════════════
+function buildAnalyticsCharts() {
+  const sigCounts = {};
+  UNIVERSE.forEach(s => { sigCounts[s.sig] = (sigCounts[s.sig]||0)+1; });
+  const sigLabels = Object.keys(sigCounts);
+  const sigColors = sigLabels.map(s => ({STRONG_BUY:"#10b981",BUY:"#34d399",ACCUMULATION:"#2dd4bf",HOLD:"#fbbf24",REDUCE:"#f97316",SELL:"#ef4444",AVOID:"#991b1b"})[s]||"#475569");
+
+  if(charts.sig) charts.sig.destroy();
+  charts.sig = new Chart(document.getElementById("sigDoughnut"),{type:"doughnut",
+    data:{labels:sigLabels,datasets:[{data:Object.values(sigCounts),backgroundColor:sigColors,borderColor:"#111",borderWidth:2}]},
+    options:{responsive:true,cutout:"65%",plugins:{legend:{labels:{color:"#64748b",font:{size:10}}}}}
+  });
+
+  // Win rate by pattern
+  const patWin = {};const patTotal = {};
+  SIGNAL_HISTORY.forEach(h => {
+    if (!h.pat) return;
+    patTotal[h.pat] = (patTotal[h.pat]||0)+1;
+    if (h.outcome==="WIN") patWin[h.pat] = (patWin[h.pat]||0)+1;
+  });
+  const pats = Object.keys(patTotal);
+  const winRates = pats.map(p => Math.round((patWin[p]||0)/patTotal[p]*100));
+
+  if(charts.wr) charts.wr.destroy();
+  charts.wr = new Chart(document.getElementById("winRateChart"),{type:"bar",
+    data:{labels:pats.map(p=>PATTERN_LABELS[p]||p),datasets:[{label:"Win Rate %",data:winRates,backgroundColor:winRates.map(r=>r>=70?"#10b98188":r>=50?"#fbbf2488":"#ef444488"),borderRadius:4}]},
+    options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+"%"}}},
+      scales:{x:{ticks:{color:"#475569",callback:v=>v+"%"},grid:{color:"#1e293b"},min:0,max:100},y:{ticks:{color:"#94a3b8"},grid:{color:"#1e293b"}}}}
+  });
+
+  // Score distribution buckets
+  const buckets = [0,0,0,0,0]; // 0-20,20-40,40-60,60-80,80-100
+  UNIVERSE.forEach(s => {
+    const v = s.ts||0;
+    if(v<20)buckets[0]++;else if(v<40)buckets[1]++;else if(v<60)buckets[2]++;else if(v<80)buckets[3]++;else buckets[4]++;
+  });
+
+  if(charts.dist) charts.dist.destroy();
+  charts.dist = new Chart(document.getElementById("scoreDistChart"),{type:"bar",
+    data:{labels:["0–20","20–40","40–60","60–80","80–100"],
+      datasets:[{label:"Stocks",data:buckets,backgroundColor:["#ef444488","#f9731688","#fbbf2488","#60a5fa88","#a78bfa88"],borderRadius:4}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"#475569"},grid:{color:"#1e293b"}},y:{ticks:{color:"#475569"},grid:{color:"#1e293b"}}}}
+  });
+
+  // Classification bar
+  const clsLabels = ["ELITE_LEADER","STRONG_STRUCTURE","EMERGING_LEADER","CONSTRUCTIVE","WATCHLIST","WEAK_STRUCTURE","AVOID"];
+  const clsShort  = ["Elite","Strong","Emerg","Const","Watch","Weak","Avoid"];
+  const clsCounts = clsLabels.map(c => UNIVERSE.filter(s=>s.cls===c).length);
+  const clsColors = ["#7c3aed88","#2563eb88","#0891b288","#15803d88","#b4580688","#c2410c88","#b91c1c88"];
+
+  if(charts.cls) charts.cls.destroy();
+  charts.cls = new Chart(document.getElementById("classHeatChart"),{type:"bar",
+    data:{labels:clsShort,datasets:[{label:"Stocks",data:clsCounts,backgroundColor:clsColors,borderRadius:4}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"#94a3b8"},grid:{color:"#1e293b"}},y:{ticks:{color:"#475569"},grid:{color:"#1e293b"}}}}
+  });
+}
+
+function buildSignalHistoryTable() {
+  const OC = {WIN:"oc-WIN",LOSS:"oc-LOSS",OPEN:"oc-OPEN",NEUTRAL:"oc-NEUTRAL"};
+  document.getElementById("shTable").innerHTML = SIGNAL_HISTORY.map(h => `
+    <tr>
+      <td style="font-weight:600;color:#e2e8f0">${h.sym}</td>
+      <td style="color:#475569">${h.date}</td>
+      <td><span class="badge ${SIG_CLASS[h.sig]||''}">${SIG_LABEL[h.sig]||h.sig}</span></td>
+      <td style="color:#64748b">${h.pat?PATTERN_LABELS[h.pat]||h.pat:"—"}</td>
+      <td class="${h.r7>=0?"ret-pos":"ret-neg"}">${pct(h.r7)}</td>
+      <td class="${h.r30>=0?"ret-pos":"ret-neg"}">${pct(h.r30)}</td>
+      <td class="${h.r60!=null?(h.r60>=0?"ret-pos":"ret-neg"):"" }">${pct(h.r60)}</td>
+      <td style="color:#64748b">—</td>
+      <td><span class="${OC[h.outcome]||"oc-OPEN"}">${h.outcome}</span></td>
+    </tr>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// DETAIL PANEL
+// ════════════════════════════════════════════════════════════════════════
+function openDetail(isin) {
+  const s = UNIVERSE.find(x=>x.isin===isin);
+  if (!s) return;
+  const cls  = CLASS_CONFIG_MAP[s.cls] || {label:s.cls,color:"#94a3b8"};
+  const sigC = SIG_CLASS[s.sig]||"";
+  const sigL = SIG_LABEL[s.sig]||s.sig;
+  const upColor = s.upside>0?"#10b981":"#ef4444";
+  const rrColor = s.rr>=3?"#10b981":s.rr>=2?"#fbbf24":"#ef4444";
+
+  const mvHtml = MINERVINI_LABELS.map((lbl,i) => {
+    const pass = s.minervini[i]===true;
+    return `<div class="mv-item ${pass?"pass":"fail"}">
+      <span class="mv-icon">${pass?"✓":"✗"}</span>
+      <span class="mv-text ${pass?"pass":"fail"}">${lbl}</span>
+    </div>`;
+  }).join("");
+
+  document.getElementById("detailContent").innerHTML = `
+    <div style="padding-top:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:24px;font-weight:800;color:#fff">${s.sym}</span>
+        <span class="badge ${CLS_BADGE[s.cls]||''}">${CLS_SHORT[s.cls]||s.cls}</span>
+        <span class="badge ${sigC}">${sigL}</span>
+        ${s.stage!=null?`<span style="font-size:12px;font-weight:700;color:${s.stage===2?"#10b981":s.stage===1?"#64748b":s.stage===3?"#fbbf24":"#ef4444"};background:${s.stage===2?"#052e16":s.stage===1?"#1e293b":s.stage===3?"#1c1a00":"#1a0000"};padding:3px 8px;border-radius:6px">Stage ${s.stage}</span>`:""}
+      </div>
+      <div style="font-size:13px;color:#64748b;margin-top:4px">${s.name} · ${s.sector}</div>
+      <div style="font-size:28px;font-weight:800;color:#fff;margin-top:8px">${inr(s.cmp)}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px">${fmt(Math.abs(s.fromHi))}% from 52w high</div>
+    </div>
+
+    <!-- Scores -->
+    <div class="panel-section">
+      <h4>Score Breakdown</h4>
+      ${[
+        {l:"Technical Score",v:s.ts},
+        {l:"Conviction Score",v:s.conv},
+        {l:"Trend (30%)",v:s.trend},
+        {l:"RS (25%)",v:s.rs},
+        {l:"Momentum (20%)",v:s.mom},
+        {l:"Volume (15%)",v:s.vol},
+        {l:"Pattern (10%)",v:s.pat},
+      ].map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+        <span style="font-size:11px;color:#64748b;width:110px;flex-shrink:0">${r.l}</span>
+        <div style="flex:1;height:5px;background:#1e293b;border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,(r.v||0))}%;background:${scoreColor(r.v)};border-radius:999px"></div>
+        </div>
+        <span style="font-size:11px;color:#94a3b8;width:22px;text-align:right">${r.v!=null?Math.round(r.v):"—"}</span>
+      </div>`).join("")}
+    </div>
+
+    <!-- Trade Levels -->
+    <div class="panel-section">
+      <h4>Trade Levels</h4>
+      <div class="level-row"><span class="k">Entry Price</span><span class="v" style="color:#60a5fa">${inr(s.entry)}</span></div>
+      <div class="level-row"><span class="k">Pivot Price</span><span class="v" style="color:#a78bfa">${inr(s.piv)}</span></div>
+      <div class="level-row"><span class="k">Target Price</span><span class="v" style="color:#10b981">${inr(s.target)}</span></div>
+      <div class="level-row"><span class="k">Stop Loss</span><span class="v" style="color:#ef4444">${inr(s.stop)}</span></div>
+      <div class="level-row"><span class="k">Expected Upside</span><span class="v" style="color:${upColor}">${pct(s.upside)}</span></div>
+      <div class="level-row"><span class="k">Risk/Reward</span><span class="v" style="color:${rrColor}">${fmt(s.rr,1)}x</span></div>
+      <div class="level-row"><span class="k">Position Size</span><span class="v">${fmt(s.pos)}%</span></div>
+      <div class="level-row"><span class="k">Max Alloc</span><span class="v">${fmt(s.maxAlloc)}%</span></div>
+    </div>
+
+    <!-- RS -->
+    <div class="panel-section">
+      <h4>Relative Strength</h4>
+      <div class="level-row"><span class="k">RS Rating</span><span class="v" style="color:#10b981">${s.rs}/99</span></div>
+      <div class="level-row"><span class="k">RS vs N500 1M</span><span class="v" style="color:${s.rs1m>=0?"#10b981":"#ef4444"}">${pct(s.rs1m)}</span></div>
+      <div class="level-row"><span class="k">RS vs N500 3M</span><span class="v" style="color:${s.rs3m>=0?"#10b981":"#ef4444"}">${pct(s.rs3m)}</span></div>
+      <div class="level-row"><span class="k">RS vs N500 12M</span><span class="v" style="color:${s.rs12m>=0?"#10b981":"#ef4444"}">${pct(s.rs12m)}</span></div>
+      <div class="level-row"><span class="k">RS Trend</span><span class="v" style="color:${s.rsTrend==="UP"?"#10b981":s.rsTrend==="DOWN"?"#ef4444":"#94a3b8"}">${s.rsTrend}</span></div>
+      <div class="level-row"><span class="k">RS Breakout</span><span class="v" style="color:${s.rsBo?"#10b981":"#475569"}">${s.rsBo?"✓ Yes":"—"}</span></div>
+      <div class="level-row"><span class="k">Sector Rank</span><span class="v" style="color:#60a5fa">#${s.secRank}</span></div>
+      <div class="level-row"><span class="k">Market Rank</span><span class="v" style="color:#a78bfa">#${s.rank}</span></div>
+    </div>
+
+    <!-- Minervini -->
+    <div class="panel-section">
+      <h4>Minervini Trend Template — <span style="color:${s.mv>=7?"#10b981":s.mv>=5?"#fbbf24":"#ef4444"}">${s.mv}/8</span></h4>
+      <div class="mv-grid">${mvHtml}</div>
+    </div>
+
+    <!-- Indicators -->
+    <div class="panel-section">
+      <h4>Key Indicators</h4>
+      <div class="level-row"><span class="k">RSI (14)</span><span class="v" style="color:${s.rsi>=70?"#f97316":s.rsi>=50?"#10b981":"#ef4444"}">${s.rsi}</span></div>
+      <div class="level-row"><span class="k">ADX (14)</span><span class="v" style="color:${s.adx>=25?"#10b981":"#64748b"}">${s.adx}</span></div>
+      <div class="level-row"><span class="k">MACD Hist</span><span class="v" style="color:${s.macdHist>=0?"#10b981":"#ef4444"}">${fmt(s.macdHist,2)} ${s.macdExp?"📈":""}</span></div>
+      <div class="level-row"><span class="k">Volume Ratio</span><span class="v" style="color:${s.volRatio>=1.5?"#10b981":"#94a3b8"}">${fmt(s.volRatio,2)}x</span></div>
+      <div class="level-row"><span class="k">52w High</span><span class="v" style="color:#10b981">${inr(s.hi52)}</span></div>
+      <div class="level-row"><span class="k">52w Low</span><span class="v" style="color:#ef4444">${inr(s.lo52)}</span></div>
+      <div class="level-row"><span class="k">From 52w High</span><span class="v" style="color:${s.fromHi>=-15?"#fbbf24":"#f97316"}">${fmt(s.fromHi)}%</span></div>
+      <div class="level-row"><span class="k">ATR</span><span class="v">${inr(s.atr)} (${fmt(s.atrPct)}%)</span></div>
+    </div>
+
+    <!-- MA alignment -->
+    <div class="panel-section">
+      <h4>MA Alignment</h4>
+      <div class="level-row"><span class="k">Above 50 SMA</span><span class="v" style="color:${s.abv50?"#10b981":"#ef4444"}">${s.abv50?"✓ Yes":"✗ No"} (${inr(s.sma50)})</span></div>
+      <div class="level-row"><span class="k">Above 150 SMA</span><span class="v" style="color:${s.abv150?"#10b981":"#ef4444"}">${s.abv150?"✓ Yes":"✗ No"} (${inr(s.sma150)})</span></div>
+      <div class="level-row"><span class="k">Above 200 SMA</span><span class="v" style="color:${s.abv200?"#10b981":"#ef4444"}">${s.abv200?"✓ Yes":"✗ No"} (${inr(s.sma200)})</span></div>
+    </div>
+
+    ${s.pattern?`
+    <div class="panel-section">
+      <h4>Active Pattern — ${PATTERN_FULL[s.pattern]||s.pattern}</h4>
+      <div style="margin-top:6px;padding:10px;border-radius:8px;border:1px solid #4f46e533;background:#1e1b4b22">
+        <div class="level-row"><span class="k">Pattern Type</span><span class="v" style="color:#a78bfa">${PATTERN_FULL[s.pattern]||s.pattern}</span></div>
+        <div class="level-row"><span class="k">Pivot</span><span class="v" style="color:#a78bfa">${inr(s.piv)}</span></div>
+      </div>
+    </div>`:""}
+
+    <div style="margin-top:16px">
+      <a href="/technical/${s.isin}" style="display:block;text-align:center;padding:10px;border-radius:10px;background:#1e3a5f;border:1px solid #2563eb44;color:#93c5fd;font-size:13px;font-weight:600;text-decoration:none">
+        Open Full Detail →
+      </a>
+    </div>`;
+
+  document.getElementById("detailPanel").classList.add("open");
+  document.getElementById("overlay").classList.add("open");
+}
+
+const CLASS_CONFIG_MAP = {
+  ELITE_LEADER:{label:"Elite Leader",color:"#c4b5fd"},
+  STRONG_STRUCTURE:{label:"Strong Structure",color:"#93c5fd"},
+  EMERGING_LEADER:{label:"Emerging Leader",color:"#67e8f9"},
+  CONSTRUCTIVE:{label:"Constructive",color:"#86efac"},
+  WATCHLIST:{label:"Watchlist",color:"#fde047"},
+  WEAK_STRUCTURE:{label:"Weak Structure",color:"#fdba74"},
+  AVOID:{label:"Avoid",color:"#fca5a5"},
+};
+
+function closePanel() {
+  document.getElementById("detailPanel").classList.remove("open");
+  document.getElementById("overlay").classList.remove("open");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════════════════════════════════════
+function switchTab(id, el) {
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById("tab-"+id).classList.add("active");
+  activeTab = id;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// START
+// ════════════════════════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
