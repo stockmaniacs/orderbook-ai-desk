@@ -25,15 +25,20 @@ echo ""
 echo "→ Installing system packages..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq \
-    python3.11 \
-    python3.11-venv \
-    python3.11-dev \
-    python3-pip \
     build-essential \
     libpq-dev \
     certbot \
     python3-certbot-nginx \
-    postgresql-client
+    postgresql-client \
+    software-properties-common
+
+# Python 3.11 is not in Ubuntu 24.04 default repos — use deadsnakes PPA
+if ! python3.11 --version &>/dev/null 2>&1; then
+    echo "  Python 3.11 not found, adding deadsnakes PPA..."
+    sudo add-apt-repository ppa:deadsnakes/ppa -y
+    sudo apt-get update -qq
+fi
+sudo apt-get install -y -qq python3.11 python3.11-venv python3.11-dev python3-pip
 
 # ── 2. pgvector extension ─────────────────────────────────────────────────────
 echo ""
