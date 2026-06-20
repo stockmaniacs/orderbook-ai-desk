@@ -1,45 +1,7 @@
-name: Deploy frontend to Cloudflare Pages
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
-
-jobs:
-  deploy:
-    name: Build and deploy Next.js to Cloudflare Pages
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      deployments: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: frontend
-
-      - name: Build Next.js
-        run: npm run build
-        working-directory: frontend
-        env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: orderbook-ai-desk
-          directory: frontend/.next
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+# Frontend is deployed automatically by Cloudflare Pages via git integration.
+# Cloudflare Pages detects pushes to main, runs:
+#   npm run build && npm run pages:build
+# and deploys .vercel/output/static using the wrangler.toml config.
+#
+# This GitHub Actions workflow is intentionally disabled to avoid conflicts.
+# No action needed here.
