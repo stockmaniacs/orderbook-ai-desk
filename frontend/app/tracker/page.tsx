@@ -123,7 +123,7 @@ export default function MasterTrackerPage() {
           <a href="/tracker/alerts" className={`px-4 py-2 text-sm rounded-lg font-medium ${highSevCount > 0 ? "bg-red-100 text-red-700 border border-red-200" : "bg-gray-100 text-gray-600"}`}>
             🔔 Alerts ({alertCount})
           </a>
-          <a href="/public/master-tracker-dashboard.html" target="_blank"
+          <a href="/master-tracker-dashboard.html" target="_blank"
              className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 font-medium">
             Open Full Dashboard
           </a>

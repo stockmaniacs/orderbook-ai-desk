@@ -77,7 +77,7 @@ export default function SubcontractOpportunitiesPage() {
           </p>
         </div>
         <a
-          href="/public/subcontract-dashboard.html"
+          href="/subcontract-dashboard.html"
           target="_blank"
           className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"
         >
