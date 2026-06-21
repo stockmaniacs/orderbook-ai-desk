@@ -84,19 +84,13 @@ async def generate_analysis(
     metrics: dict[str, Any],
     recent_orders: list[dict],
     quarterly_snapshots: list[dict],
-    model: str = "gemini-1.5-pro",
+    model: str = "meta-llama/llama-3.3-70b-instruct:free",
 ) -> dict[str, Any]:
     """
     Generate AI analysis for a company's order book.
     Returns structured dict matching OrderAISummary fields.
     """
-    try:
-        import google.generativeai as genai
-        from ..core.config import settings  # type: ignore
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-    except ImportError:
-        logger.error("google-generativeai not installed")
-        return _fallback_analysis(metrics)
+    from workers.ai_client import call_ai_sync, parse_json_response  # noqa: PLC0415
 
     # Format recent orders for the prompt
     orders_text = _format_orders(recent_orders[:15])
@@ -125,20 +119,8 @@ async def generate_analysis(
     )
 
     try:
-        genai_model = genai.GenerativeModel(model)
-        response = genai_model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.3,
-                "top_p": 0.9,
-                "response_mime_type": "application/json",
-            },
-        )
-        raw = response.text.strip()
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-
-        data = json.loads(raw)
+        raw = call_ai_sync(prompt, model=model, temperature=0.3)
+        data = parse_json_response(raw)
         data["model_version"] = model
         return data
 

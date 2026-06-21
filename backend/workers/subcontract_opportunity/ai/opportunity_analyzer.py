@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any
 
-import google.generativeai as genai
+from workers.ai_client import MODEL_FAST, call_ai, parse_json_response
 
 # ─── Theme → subcontract category map ────────────────────────────────────────
 # Which product categories are needed for each order theme, with typical spend %
@@ -228,7 +228,7 @@ Return JSON only:
 async def generate_beneficiary_narratives(
     beneficiaries: list[dict],
     order: dict,
-    model: str = "gemini-1.5-flash",
+    model: str = MODEL_FAST,
 ) -> list[dict]:
     """
     Generate AI narratives for the top N beneficiaries (to save API cost).
@@ -255,16 +255,8 @@ async def generate_beneficiary_narratives(
         )
 
         try:
-            model_client = genai.GenerativeModel(model)
-            response = await model_client.generate_content_async(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    temperature=0.2,
-                    response_mime_type="application/json",
-                ),
-            )
-            raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.text.strip(), flags=re.MULTILINE)
-            narrative = json.loads(raw)
+            raw = await call_ai(prompt, model=model, temperature=0.2)
+            narrative = parse_json_response(raw)
             b["rationale"] = narrative.get("rationale")
             b["key_catalysts"] = narrative.get("key_catalysts", [])
             b["key_risks"] = narrative.get("key_risks", [])

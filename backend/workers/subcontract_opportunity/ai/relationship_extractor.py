@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any
 
-import google.generativeai as genai
+from workers.ai_client import MODEL_FAST, call_ai, parse_json_response
 
 # ─── Relationship taxonomy ────────────────────────────────────────────────────
 RELATIONSHIP_TYPES = {
@@ -137,7 +137,7 @@ async def extract_relationships(
     company_name: str,
     isin: str,
     doc_type: str,
-    model: str = "gemini-1.5-flash",
+    model: str = MODEL_FAST,
 ) -> list[dict]:
     """
     Extract supply-chain relationships from document text.
@@ -158,22 +158,12 @@ async def extract_relationships(
         text=text,
     )
 
-    model_client = genai.GenerativeModel(model)
-    response = await model_client.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.1,
-            response_mime_type="application/json",
-        ),
-    )
-
-    raw = response.text.strip()
-    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE)
+    raw = await call_ai(prompt, model=model, temperature=0.1)
 
     try:
-        result = json.loads(raw)
+        result = parse_json_response(raw)
         rels = result.get("relationships", [])
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         rels = _fallback_extraction(text, company_name, isin)
 
     return _validate_and_normalize(rels)
@@ -183,7 +173,7 @@ async def extract_customer_concentration(
     text: str,
     company_name: str,
     isin: str,
-    model: str = "gemini-1.5-flash",
+    model: str = MODEL_FAST,
 ) -> list[dict]:
     """
     Specialized extraction for customer concentration tables.
@@ -194,20 +184,12 @@ async def extract_customer_concentration(
         text=text[:30_000],
     )
 
-    model_client = genai.GenerativeModel(model)
-    response = await model_client.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.1,
-            response_mime_type="application/json",
-        ),
-    )
+    raw = await call_ai(prompt, model=model, temperature=0.1)
 
-    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.text.strip(), flags=re.MULTILINE)
     try:
-        result = json.loads(raw)
+        result = parse_json_response(raw)
         customers = result.get("customers", [])
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         return []
 
     # Convert to relationship dicts (source=this company, target=customer)

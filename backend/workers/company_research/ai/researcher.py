@@ -15,7 +15,7 @@ import json
 import re
 from typing import Any
 
-import google.generativeai as genai
+from workers.ai_client import MODEL_DEEP, call_ai, parse_json_response
 
 # ─── Synthesis prompt ─────────────────────────────────────────────────────────
 THESIS_PROMPT = """You are a senior Indian equity research analyst.
@@ -127,7 +127,7 @@ async def generate_investment_thesis(
     financials: dict,
     extracted_fields: dict[str, dict],
     changed_fields: list[str],
-    model: str = "gemini-1.5-pro",
+    model: str = MODEL_DEEP,
 ) -> dict[str, Any]:
     """
     Generate or update the investment thesis.
@@ -171,21 +171,11 @@ async def generate_investment_thesis(
         sections_to_update=sections_label,
     )
 
-    model_client = genai.GenerativeModel(model)
-    response = await model_client.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.2,
-            response_mime_type="application/json",
-        ),
-    )
-
-    raw = response.text.strip()
-    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE)
+    raw = await call_ai(prompt, model=model, temperature=0.2)
 
     try:
-        result = json.loads(raw)
-    except json.JSONDecodeError:
+        result = parse_json_response(raw)
+    except (json.JSONDecodeError, ValueError):
         return _fallback_thesis(company_name, current_price)
 
     return result

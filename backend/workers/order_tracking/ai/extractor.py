@@ -55,47 +55,27 @@ IMPORTANT RULES:
 
 async def extract_order_details(
     text: str,
-    model: str = "gemini-1.5-flash",
+    model: str = "meta-llama/llama-3.3-70b-instruct:free",
 ) -> dict[str, Any]:
     """
-    Send announcement text to Gemini and return structured order data.
-    Returns empty dict on failure.
+    Send announcement text to OpenRouter and return structured order data.
+    Returns fallback dict on failure.
     """
-    try:
-        import google.generativeai as genai
-        from ..core.config import settings
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-    except ImportError:
-        logger.error("google-generativeai not installed")
-        return _fallback_extraction(text)
+    from workers.ai_client import call_ai_sync, parse_json_response  # noqa: PLC0415
 
     prompt = EXTRACTION_PROMPT.format(text=text[:6000])  # cap at 6k chars
 
     try:
-        genai_model = genai.GenerativeModel(model)
-        response = genai_model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.1,
-                "top_p": 0.8,
-                "response_mime_type": "application/json",
-            },
-        )
-        raw = response.text.strip()
-
-        # Strip markdown code fences if present
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-
-        data = json.loads(raw)
+        raw = call_ai_sync(prompt, model=model, temperature=0.1)
+        data = parse_json_response(raw)
         data["extraction_model"] = model
         return data
 
-    except json.JSONDecodeError as e:
-        logger.error("Gemini returned invalid JSON: %s", e)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error("OpenRouter returned invalid JSON: %s", e)
         return _fallback_extraction(text)
     except Exception as e:
-        logger.error("Gemini extraction error: %s", e)
+        logger.error("OpenRouter extraction error: %s", e)
         return _fallback_extraction(text)
 
 

@@ -9,7 +9,7 @@ import json
 import re
 from typing import Any
 
-import google.generativeai as genai
+from workers.ai_client import MODEL_FAST, call_ai, parse_json_response
 
 # ─── Field definitions ────────────────────────────────────────────────────────
 # Each field: name, category, description (for the prompt), extraction type
@@ -121,7 +121,7 @@ async def extract_research_fields(
     doc_type: str,
     fiscal_period: str,
     fields_to_extract: list[str] | None = None,
-    model: str = "gemini-1.5-flash",
+    model: str = MODEL_FAST,
 ) -> dict[str, Any]:
     """
     Extract research fields from document text.
@@ -149,22 +149,11 @@ async def extract_research_fields(
         text=text,
     )
 
-    model_client = genai.GenerativeModel(model)
-    response = await model_client.generate_content_async(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.1,
-            response_mime_type="application/json",
-        ),
-    )
-
-    raw = response.text.strip()
-    # Strip markdown code fences if present
-    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE)
+    raw = await call_ai(prompt, model=model, temperature=0.1)
 
     try:
-        result = json.loads(raw)
-    except json.JSONDecodeError:
+        result = parse_json_response(raw)
+    except (json.JSONDecodeError, ValueError):
         return _fallback_extraction(text, target_fields)
 
     # Validate structure
