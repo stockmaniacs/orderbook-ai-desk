@@ -220,7 +220,7 @@ def seed_universe_task():
         async with _get_db_session() as db:
             inserted = 0
             for isin, item in companies.items():
-                ticker = item.get("ticker", "")
+                ticker = item.get("ticker", "").removesuffix(".NS").removesuffix(".BO")
                 stmt = pg_insert(Company).values(
                     isin=isin,
                     symbol_nse=ticker,

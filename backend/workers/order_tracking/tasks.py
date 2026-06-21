@@ -34,7 +34,7 @@ def scrape_bse_orders(self, days_back: int = 1) -> dict:
 
 async def _scrape_bse_async(days_back: int) -> dict:
     from sqlalchemy.ext.asyncio import AsyncSession
-    from ..core.database import async_session_factory
+    from database import async_session_factory
     from .scrapers.bse_scraper import BSEOrderScraper
 
     async with BSEOrderScraper() as scraper:
@@ -115,7 +115,7 @@ async def _extract_async(ann: dict) -> Optional[str]:
     from sqlalchemy.dialects.postgresql import insert as pg_insert
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from ..core.database import async_session_factory
+    from database import async_session_factory
     from .models import OrderAnnouncement
     from .scrapers.pdf_parser import extract_text_from_url
     from .ai.extractor import extract_order_details, is_valid_order_extraction
@@ -235,7 +235,7 @@ def recompute_metrics(self, isin: str) -> dict:
 
 
 async def _recompute_async(isin: str) -> dict:
-    from ..core.database import async_session_factory
+    from database import async_session_factory
     from .service import compute_metrics
 
     async with async_session_factory() as db:
@@ -244,12 +244,14 @@ async def _recompute_async(isin: str) -> dict:
 
     # Publish event to Redis stream
     try:
-        from ..core.redis_client import redis_client
-        import json
-        await redis_client.xadd(
+        import os
+        import redis.asyncio as aioredis
+        r = aioredis.from_url(os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0"))
+        await r.xadd(
             "stream:order_book_updated",
             {"isin": isin, "timestamp": datetime.utcnow().isoformat()},
         )
+        await r.aclose()
     except Exception as exc:
         logger.warning("Redis publish failed: %s", exc)
 
@@ -278,7 +280,7 @@ def generate_ai_analysis(self, isin: str) -> dict:
 
 async def _ai_analysis_async(isin: str) -> dict:
     from sqlalchemy import select, desc
-    from ..core.database import async_session_factory
+    from database import async_session_factory
     from .models import OrderAISummary, OrderBookMetrics, OrderAnnouncement, OrderBookSnapshot
     from .ai.analyzer import generate_analysis
 
@@ -375,7 +377,7 @@ def build_quarterly_snapshots(self) -> dict:
 
 async def _snapshots_async() -> dict:
     from sqlalchemy import select, func
-    from ..core.database import async_session_factory
+    from database import async_session_factory
     from .models import OrderAnnouncement
     from .service import upsert_quarterly_snapshot, _fiscal_quarter
 
