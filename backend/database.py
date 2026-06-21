@@ -54,8 +54,18 @@ async_session_factory = AsyncSessionLocal
 
 @asynccontextmanager
 async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
-    """Context manager for use in Celery tasks and scripts (outside FastAPI)."""
-    async with AsyncSessionLocal() as session:
+    """Context manager for Celery tasks and scripts (outside FastAPI).
+
+    Uses NullPool so every call creates a fresh DB connection in the current
+    asyncio event loop — avoids the 'Future attached to a different loop' error
+    that occurs when Celery prefork workers reuse a pooled engine across
+    asyncio.run() boundaries.
+    """
+    from sqlalchemy.pool import NullPool
+
+    _engine = create_async_engine(DATABASE_URL, poolclass=NullPool, echo=False)
+    _factory = async_sessionmaker(bind=_engine, class_=AsyncSession, expire_on_commit=False)
+    async with _factory() as session:
         try:
             yield session
             await session.commit()
@@ -64,3 +74,4 @@ async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+    await _engine.dispose()

@@ -22,8 +22,8 @@ except ImportError:
 
 def _get_db_session():
     """Create async DB session (import lazily to avoid circular imports)."""
-    from database import async_session_factory
-    return async_session_factory()
+    from database import get_async_session_context
+    return get_async_session_context()
 
 
 # ─── Task 1: Fetch & process documents for a single company ──────────────────

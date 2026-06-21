@@ -33,8 +33,7 @@ def scrape_bse_orders(self, days_back: int = 1) -> dict:
 
 
 async def _scrape_bse_async(days_back: int) -> dict:
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from database import async_session_factory
+    from database import get_async_session_context
     from .scrapers.bse_scraper import BSEOrderScraper
 
     async with BSEOrderScraper() as scraper:
@@ -43,7 +42,7 @@ async def _scrape_bse_async(days_back: int) -> dict:
     logger.info("BSE: fetched %d order-related announcements", len(announcements))
     queued = 0
 
-    async with async_session_factory() as db:
+    async with get_async_session_context() as db:
         for ann in announcements:
             if not ann.get("isin"):
                 continue
@@ -113,9 +112,8 @@ async def _extract_async(ann: dict) -> Optional[str]:
     import httpx
     from sqlalchemy import select
     from sqlalchemy.dialects.postgresql import insert as pg_insert
-    from sqlalchemy.ext.asyncio import AsyncSession
 
-    from database import async_session_factory
+    from database import get_async_session_context
     from .models import OrderAnnouncement
     from .scrapers.pdf_parser import extract_text_from_url
     from .ai.extractor import extract_order_details, is_valid_order_extraction
@@ -124,7 +122,7 @@ async def _extract_async(ann: dict) -> Optional[str]:
     isin = ann.get("isin", "")
     content_hash = ann.get("content_hash", "")
 
-    async with async_session_factory() as db:
+    async with get_async_session_context() as db:
         # Dedup check
         existing = await db.execute(
             select(OrderAnnouncement).where(
@@ -235,10 +233,10 @@ def recompute_metrics(self, isin: str) -> dict:
 
 
 async def _recompute_async(isin: str) -> dict:
-    from database import async_session_factory
+    from database import get_async_session_context
     from .service import compute_metrics
 
-    async with async_session_factory() as db:
+    async with get_async_session_context() as db:
         metrics = await compute_metrics(db, isin)
         await db.commit()
 
@@ -280,11 +278,11 @@ def generate_ai_analysis(self, isin: str) -> dict:
 
 async def _ai_analysis_async(isin: str) -> dict:
     from sqlalchemy import select, desc
-    from database import async_session_factory
+    from database import get_async_session_context
     from .models import OrderAISummary, OrderBookMetrics, OrderAnnouncement, OrderBookSnapshot
     from .ai.analyzer import generate_analysis
 
-    async with async_session_factory() as db:
+    async with get_async_session_context() as db:
         # Fetch metrics
         res = await db.execute(
             select(OrderBookMetrics).where(OrderBookMetrics.isin == isin)
@@ -377,11 +375,11 @@ def build_quarterly_snapshots(self) -> dict:
 
 async def _snapshots_async() -> dict:
     from sqlalchemy import select, func
-    from database import async_session_factory
+    from database import get_async_session_context
     from .models import OrderAnnouncement
     from .service import upsert_quarterly_snapshot, _fiscal_quarter
 
-    async with async_session_factory() as db:
+    async with get_async_session_context() as db:
         # Get all distinct ISINs with orders
         res = await db.execute(
             select(OrderAnnouncement.isin)
