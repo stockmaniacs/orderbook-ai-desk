@@ -47,8 +47,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-# Alias used by technical_analysis router
+# Aliases used by various routers
 get_async_session = get_db
+async_session_factory = AsyncSessionLocal
 
 
 @asynccontextmanager

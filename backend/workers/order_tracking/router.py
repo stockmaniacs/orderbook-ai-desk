@@ -45,7 +45,7 @@ router = APIRouter(tags=["Order Tracking"])
 
 # Dependency placeholder — replace with your actual DB session factory
 async def get_db() -> AsyncSession:  # type: ignore
-    from ..core.database import async_session_factory  # type: ignore
+    from database import async_session_factory
     async with async_session_factory() as session:
         yield session
 
