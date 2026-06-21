@@ -5,6 +5,7 @@ All models import Base from here.
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from dotenv import load_dotenv
@@ -39,6 +40,20 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for use in Celery tasks and scripts (outside FastAPI)."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
         except Exception:
             await session.rollback()
             raise
