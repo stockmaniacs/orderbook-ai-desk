@@ -32,6 +32,7 @@ celery_app.conf.update(
     task_track_started=True,
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    task_default_queue="default",
     task_routes={
         "workers.technical_analysis.tasks.*": {"queue": "technical_high"},
         "workers.order_tracking.tasks.*": {"queue": "default"},
