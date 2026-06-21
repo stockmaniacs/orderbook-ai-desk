@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 import httpx
+from .nse_scraper import last_trading_day
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,9 @@ class BSEOrderScraper:
         Fetch BSE announcements from the last N days.
         Returns raw announcement dicts ready for AI extraction.
         """
-        from_date = (date.today() - timedelta(days=days_back)).strftime("%Y%m%d")
-        to_date = date.today().strftime("%Y%m%d")
+        trade_day = last_trading_day()
+        from_date = trade_day.strftime("%Y%m%d")
+        to_date = trade_day.strftime("%Y%m%d")
 
         params = {
             "pageno": "1",

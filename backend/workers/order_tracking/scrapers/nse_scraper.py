@@ -13,6 +13,33 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# NSE public holidays 2026 (add more as needed)
+NSE_HOLIDAYS_2026 = {
+    date(2026, 1, 26),   # Republic Day
+    date(2026, 3, 2),    # Holi
+    date(2026, 3, 30),   # Ram Navami
+    date(2026, 4, 2),    # Good Friday
+    date(2026, 4, 6),    # Mahavir Jayanti
+    date(2026, 4, 14),   # Dr. Ambedkar Jayanti
+    date(2026, 5, 1),    # Maharashtra Day
+    date(2026, 8, 15),   # Independence Day
+    date(2026, 10, 2),   # Gandhi Jayanti
+    date(2026, 10, 21),  # Diwali Laxmi Pujan
+    date(2026, 10, 22),  # Diwali Balipratipada
+    date(2026, 11, 5),   # Guru Nanak Jayanti
+    date(2026, 12, 25),  # Christmas
+}
+
+
+def last_trading_day(ref: date | None = None) -> date:
+    """Return the most recent NSE trading day (skips weekends + holidays)."""
+    d = ref or date.today()
+    # Step back until we hit a weekday that isn't a holiday
+    d -= timedelta(days=1)
+    while d.weekday() >= 5 or d in NSE_HOLIDAYS_2026:
+        d -= timedelta(days=1)
+    return d
+
 NSE_BASE = "https://www.nseindia.com"
 NSE_CORP_FILINGS = f"{NSE_BASE}/api/corporate-announcements"
 NSE_DOC = f"{NSE_BASE}/corporate-announcements"
@@ -66,8 +93,9 @@ class NSEOrderScraper:
         """
         Fetch NSE corporate announcements for the last N days.
         """
-        from_dt = (date.today() - timedelta(days=days_back)).strftime("%d-%m-%Y")
-        to_dt = date.today().strftime("%d-%m-%Y")
+        trade_day = last_trading_day()
+        from_dt = trade_day.strftime("%d-%m-%Y")
+        to_dt = trade_day.strftime("%d-%m-%Y")
 
         params = {
             "index": "equities",
