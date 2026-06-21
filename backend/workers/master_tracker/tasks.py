@@ -19,7 +19,7 @@ from typing import Any
 from celery import shared_task
 from sqlalchemy import select, text
 
-from backend.database import get_async_session_context
+from database import get_async_session_context
 from .service import (
     add_or_update_stock,
     get_alerts,

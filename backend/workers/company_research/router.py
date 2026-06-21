@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/v1/research", tags=["Company Research"])
 
 # Dependency — async DB session
 async def get_db() -> AsyncSession:
-    from backend.database import async_session_factory
+    from database import async_session_factory
     async with async_session_factory() as session:
         yield session
 

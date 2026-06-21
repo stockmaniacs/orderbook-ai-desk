@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 # Import celery app from main config (adjust import path as needed)
 try:
-    from backend.celery_app import celery_app
+    from workers.celery_app import celery_app
 except ImportError:
     celery_app = Celery("company_research", broker="redis://localhost:6379/0")
 
 
 def _get_db_session():
     """Create async DB session (import lazily to avoid circular imports)."""
-    from backend.database import async_session_factory
+    from database import async_session_factory
     return async_session_factory()
 
 

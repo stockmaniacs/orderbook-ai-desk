@@ -18,7 +18,7 @@ from typing import Any
 from celery import shared_task
 from sqlalchemy import text
 
-from backend.database import get_async_session_context
+from database import get_async_session_context
 from .service import (
     analyze_order_opportunity,
     get_graph_stats,

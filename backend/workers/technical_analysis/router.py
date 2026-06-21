@@ -35,7 +35,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_async_session
+from database import get_async_session
 from .models import (
     BreakoutLevel, DailySnapshot, MarketBreadth, PatternDetection,
     RelativeStrength, SignalHistory, TechnicalAlert, TechnicalProfile,

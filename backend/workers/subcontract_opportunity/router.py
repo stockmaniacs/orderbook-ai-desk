@@ -29,7 +29,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_db
+from database import get_db
 from .schemas import (
     BeneficiaryOut,
     CompanyGraphOut,
