@@ -194,10 +194,13 @@ def seed_universe_task():
     async def _run():
         async with _get_db_session() as db:
             # Pull from instruments_master (populated by Price Worker)
+            from sqlalchemy import text
             result = await db.execute(
-                "SELECT isin, symbol_nse, symbol_bse, bse_code, company_name, "
-                "sector, industry, market_cap_cr, market_cap_cat "
-                "FROM instruments_master WHERE is_active = true"
+                text(
+                    "SELECT isin, symbol_nse, symbol_bse, bse_code, company_name, "
+                    "sector, industry, market_cap_cr, market_cap_cat "
+                    "FROM instruments_master WHERE is_active = true"
+                )
             )
             rows = result.fetchall()
             inserted = 0
