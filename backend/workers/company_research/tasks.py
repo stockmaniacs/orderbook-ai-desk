@@ -185,36 +185,52 @@ def process_document_task(self, isin: str, doc_meta: dict):
 @celery_app.task(name="company_research.seed_universe")
 def seed_universe_task():
     """
-    One-time task: populate research_companies from instruments master table.
-    Subsequent runs are idempotent (uses INSERT ... ON CONFLICT DO NOTHING).
+    Populate research_companies from markethub's NSE constituents API.
+    Fetches NIFTY 500 + NIFTY MIDCAP 150 for broad coverage.
+    Subsequent runs are idempotent (INSERT ... ON CONFLICT DO NOTHING).
     """
+    import httpx
     from .models import Company
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+    MARKETHUB_URL = "http://localhost:8000/api/v1/nse/constituents"
+    INDICES = ["NIFTY 500", "NIFTY MIDCAP150"]
+
     async def _run():
+        companies: dict[str, dict] = {}  # isin → row
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            for index in INDICES:
+                try:
+                    r = await client.get(MARKETHUB_URL, params={"index": index})
+                    r.raise_for_status()
+                    payload = r.json()
+                    items = payload.get("data", payload) if isinstance(payload, dict) else payload
+                    for item in items:
+                        isin = item.get("isin")
+                        if isin and isin not in companies:
+                            companies[isin] = item
+                except Exception as exc:
+                    import logging
+                    logging.getLogger(__name__).warning("Failed to fetch %s: %s", index, exc)
+
+        if not companies:
+            return {"inserted": 0, "error": "No data from markethub API"}
+
         async with _get_db_session() as db:
-            # Pull from instruments_master (populated by Price Worker)
-            from sqlalchemy import text
-            result = await db.execute(
-                text(
-                    "SELECT isin, symbol_nse, symbol_bse, bse_code, company_name, "
-                    "sector, industry, market_cap_cr, market_cap_cat "
-                    "FROM instruments_master WHERE is_active = true"
-                )
-            )
-            rows = result.fetchall()
             inserted = 0
-            for row in rows:
+            for isin, item in companies.items():
+                ticker = item.get("ticker", "")
                 stmt = pg_insert(Company).values(
-                    isin=row.isin,
-                    symbol_nse=row.symbol_nse,
-                    symbol_bse=row.symbol_bse,
-                    bse_code=row.bse_code,
-                    company_name=row.company_name,
-                    sector=row.sector,
-                    industry=row.industry,
-                    market_cap_cr=row.market_cap_cr,
-                    market_cap_cat=row.market_cap_cat,
+                    isin=isin,
+                    symbol_nse=ticker,
+                    symbol_bse=None,
+                    bse_code=None,
+                    company_name=item.get("company_name", ticker),
+                    sector=None,
+                    industry=item.get("industry"),
+                    market_cap_cr=None,
+                    market_cap_cat=None,
                 ).on_conflict_do_nothing(index_elements=["isin"])
                 await db.execute(stmt)
                 inserted += 1
