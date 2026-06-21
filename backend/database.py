@@ -47,6 +47,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+# Alias used by technical_analysis router
+get_async_session = get_db
+
+
 @asynccontextmanager
 async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for use in Celery tasks and scripts (outside FastAPI)."""

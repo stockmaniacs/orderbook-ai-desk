@@ -13,7 +13,7 @@ module.exports = {
     {
       name: 'orderbook-api',
       script: `${VENV}/uvicorn`,
-      args: 'main:app --host 127.0.0.1 --port 8000 --workers 2',
+      args: 'main:app --host 127.0.0.1 --port 8001 --workers 2',
       cwd: BASE,
       interpreter: 'none',
       autorestart: true,
