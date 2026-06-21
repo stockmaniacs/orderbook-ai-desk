@@ -57,7 +57,7 @@ from .tasks import (
     update_signal_outcomes_task,
 )
 
-router = APIRouter(prefix="/api/v1/technical", tags=["technical"])
+router = APIRouter(tags=["technical"])
 log = logging.getLogger(__name__)
 
 

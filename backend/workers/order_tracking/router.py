@@ -41,7 +41,7 @@ from .service import (
     _fiscal_quarter,
 )
 
-router = APIRouter(prefix="/api/v1/order-tracking", tags=["Order Tracking"])
+router = APIRouter(tags=["Order Tracking"])
 
 # Dependency placeholder — replace with your actual DB session factory
 async def get_db() -> AsyncSession:  # type: ignore

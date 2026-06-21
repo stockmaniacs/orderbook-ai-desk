@@ -64,7 +64,7 @@ from .models import SectorTheme
 from .graph.traversal import find_suppliers, find_customers
 from sqlalchemy import select
 
-router = APIRouter(prefix="/api/v1/subcontract", tags=["Subcontract Opportunity"])
+router = APIRouter(tags=["Subcontract Opportunity"])
 
 
 # ─── Opportunity feed ─────────────────────────────────────────────────────────

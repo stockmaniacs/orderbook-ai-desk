@@ -74,7 +74,7 @@ from .tasks import (
     seed_from_research_task,
 )
 
-router = APIRouter(prefix="/api/v1/tracker", tags=["Master Tracker"])
+router = APIRouter(tags=["Master Tracker"])
 
 
 # ─── Master dashboard ─────────────────────────────────────────────────────────

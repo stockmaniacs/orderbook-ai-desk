@@ -22,7 +22,7 @@ from .schemas import (
 from .service import get_research_dashboard, get_universe
 from .tasks import run_research_pipeline_task
 
-router = APIRouter(prefix="/api/v1/research", tags=["Company Research"])
+router = APIRouter(tags=["Company Research"])
 
 
 # Dependency — async DB session
