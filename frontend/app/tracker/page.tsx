@@ -1,5 +1,7 @@
 "use client";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://orderbook-api.stockmaniacs.net";
+
 import { useEffect, useState, useCallback } from "react";
 
 const SIGNAL_CONFIG = {
@@ -91,7 +93,7 @@ export default function MasterTrackerPage() {
     if (sector) params.set("sector", sector);
     if (mcap)   params.set("market_cap_cat", mcap);
 
-    const res = await fetch(`/api/v1/tracker/dashboard?${params}`);
+    const res = await fetch(`${API_BASE}/api/v1/tracker/dashboard?${params}`);
     const data = await res.json();
     setItems(data.items || []);
     setTotal(data.total || 0);

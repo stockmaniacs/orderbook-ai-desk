@@ -3,7 +3,7 @@
  * Typed fetch wrapper for all order tracking endpoints.
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://orderbook-api.stockmaniacs.net";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -186,12 +186,12 @@ async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
 export const orderTrackingApi = {
   /** Full dashboard for a stock */
   getDashboard: (isin: string) =>
-    apiFetch<OrderTrackingDashboard>(`/api/v1/order-tracking/${isin}/dashboard`),
+    apiFetch<OrderTrackingDashboard>(`/api/v1/orders/${isin}/dashboard`),
 
   /** Computed metrics + scenarios */
   getMetrics: (isin: string, refresh = false) =>
     apiFetch<OrderBookMetrics>(
-      `/api/v1/order-tracking/${isin}/metrics?refresh=${refresh}`
+      `/api/v1/orders/${isin}/metrics?refresh=${refresh}`
     ),
 
   /** Paginated order list */
@@ -205,28 +205,28 @@ export const orderTrackingApi = {
         .map(([k, v]) => [k, String(v)])
     ).toString();
     return apiFetch<PaginatedOrders>(
-      `/api/v1/order-tracking/${isin}/orders${qs ? `?${qs}` : ""}`
+      `/api/v1/orders/${isin}/orders${qs ? `?${qs}` : ""}`
     );
   },
 
   /** Chart data */
   getCharts: (isin: string) =>
-    apiFetch<ChartsData>(`/api/v1/order-tracking/${isin}/charts`),
+    apiFetch<ChartsData>(`/api/v1/orders/${isin}/charts`),
 
   /** Quarterly snapshot history */
   getHistory: (isin: string) =>
     apiFetch<{ isin: string; company_name: string; snapshots: SnapshotPoint[] }>(
-      `/api/v1/order-tracking/${isin}/history`
+      `/api/v1/orders/${isin}/history`
     ),
 
   /** AI summary */
   getAISummary: (isin: string) =>
-    apiFetch<OrderAISummary>(`/api/v1/order-tracking/${isin}/ai-summary`),
+    apiFetch<OrderAISummary>(`/api/v1/orders/${isin}/ai-summary`),
 
   /** Regenerate AI summary */
   regenerateAISummary: (isin: string) =>
     apiFetch<{ detail: string }>(
-      `/api/v1/order-tracking/${isin}/ai-summary?regenerate=true`,
+      `/api/v1/orders/${isin}/ai-summary?regenerate=true`,
       { method: "GET" }
     ),
 
@@ -244,20 +244,20 @@ export const orderTrackingApi = {
         .map(([k, v]) => [k, String(v)])
     ).toString();
     return apiFetch<PaginatedOrders>(
-      `/api/v1/order-tracking/universe/recent${qs ? `?${qs}` : ""}`
+      `/api/v1/orders/universe/recent${qs ? `?${qs}` : ""}`
     );
   },
 
   /** Leaderboard by acceleration score */
   getLeaderboard: (limit = 20) =>
     apiFetch<OrderBookMetrics[]>(
-      `/api/v1/order-tracking/universe/leaderboard?limit=${limit}`
+      `/api/v1/orders/universe/leaderboard?limit=${limit}`
     ),
 
   /** Trigger scrape */
   triggerScrape: (days_back = 1) =>
     apiFetch<{ status: string }>(
-      `/api/v1/order-tracking/admin/trigger-scrape?days_back=${days_back}`,
+      `/api/v1/orders/admin/trigger-scrape?days_back=${days_back}`,
       { method: "POST" }
     ),
 };

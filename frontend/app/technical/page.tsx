@@ -1,5 +1,7 @@
 "use client";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://orderbook-api.stockmaniacs.net";
+
 import { useEffect, useState, useCallback } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -237,7 +239,7 @@ export default function TechnicalPage() {
       if (stageFilter) params.set("stage", stageFilter);
       if (patternFilter) params.set("has_pattern", "true");
       if (minRS) params.set("min_rs_rating", minRS);
-      const res = await fetch(`/api/v1/technical/dashboard?${params}`);
+      const res = await fetch(`${API_BASE}/api/v1/technical/dashboard?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
       setError(null);

@@ -1,5 +1,7 @@
 "use client";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://orderbook-api.stockmaniacs.net";
+
 import { useEffect, useState } from "react";
 
 const ACTION_COLORS: Record<string, string> = {
@@ -53,7 +55,7 @@ export default function SubcontractOpportunitiesPage() {
     if (minAmount) params.set("min_amount_cr", minAmount);
     params.set("limit", "50");
 
-    const res = await fetch(`/api/v1/subcontract/opportunities?${params}`);
+    const res = await fetch(`${API_BASE}/api/v1/subcontract/opportunities?${params}`);
     const data = await res.json();
     setOpportunities(data.items || []);
     setTotal(data.total || 0);

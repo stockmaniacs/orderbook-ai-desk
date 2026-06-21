@@ -1,5 +1,7 @@
 "use client";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://orderbook-api.stockmaniacs.net";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -87,8 +89,8 @@ export default function ResearchUniversePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/v1/research/universe?limit=200").then(r => r.json()),
-      fetch("/api/v1/research/universe/sectors").then(r => r.json()),
+      fetch(`${API_BASE}/api/v1/research/universe?limit=200`).then(r => r.json()),
+      fetch(`${API_BASE}/api/v1/research/universe/sectors`).then(r => r.json()),
     ]).then(([uni, sec]) => {
       setUniverse(uni);
       setSectors(sec);
@@ -105,7 +107,7 @@ export default function ResearchUniversePage() {
 
   const handleSeed = async () => {
     setIsSeeding(true);
-    await fetch("/api/v1/research/admin/seed-universe", { method: "POST" });
+    await fetch(`${API_BASE}/api/v1/research/admin/seed-universe`, { method: "POST" });
     setTimeout(() => setIsSeeding(false), 5000);
   };
 
